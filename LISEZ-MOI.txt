@@ -1,0 +1,42 @@
+PROSPECTIA - MVP LINKEDIN PUBLIC / MOTEUR WEB GRATUIT
+===================================================
+
+1. INSTALLATION WINDOWS
+- Decompressez le ZIP.
+- Installez Python 3.10 ou plus recent si necessaire.
+- Double-cliquez sur INSTALLER_ET_LANCER.bat.
+- Une fenetre de commande s'ouvre : gardez-la ouverte.
+- Le navigateur ouvre http://127.0.0.1:8765/
+
+2. UTILISATION
+- Cliquez sur « Recherches » dans le menu.
+- Choisissez le projet, une zone, une entreprise (facultative) et un poste (facultatif).
+- Cliquez sur « Rechercher des profils publics ».
+- Cliquez sur « Verifier » pour voir le profil sur LinkedIn manuellement.
+- Cliquez sur « Creer fiche » et renseignez les donnees verifiees.
+- Les fiches sont integrees au dashboard et aux exports CSV.
+
+3. CE QUE L'OUTIL FAIT / NE FAIT PAS
+- GRATUIT : ddgs (moteur metarecherche open source), sans cle API.
+- Il interroge des moteurs web et affiche des liens vers des profils LinkedIn PUBLICS indexes.
+- Il NE SE CONNECTE PAS A LINKEDIN, ne lit pas directement les profils, n'envoie pas de messages.
+- Il ne garantit pas de trouver des contacts ou leurs emails : il faut les verifier.
+- Les moteurs de recherche peuvent parfois bloquer / ralentir / limiter les requetes.
+- L'automatisation des prises de contact sur LinkedIn n'est pas incluse.
+- Le module Gmail existant dans le MVP reste a configurer separement.
+- Les donnees ajoutees manuellement restent dans le navigateur sur cet ordinateur.
+
+4. DEPANNAGE
+- « Module ddgs non installe » : dans ce dossier, lancer : python -m pip install -r requirements.txt
+- « Délai dépassé / Aucun moteur disponible » : reessayez plus tard ; moins de recherches.
+- Le fichier index.html seul affiche le dashboard, mais la recherche automatique exige le serveur local.
+- Pour quitter : fermez la fenetre de commande ou faites Ctrl+C.
+
+5. CADRE D'UTILISATION
+- LinkedIn interdit les crawlers/scrapers et automatisations non autorises.
+- Les liens sont fournis par des moteurs web, ce ne sont pas des fiches LinkedIn extraites.
+- Ne stockez les donnees personnelles qu'avec une base legale et un usage proportionne.
+- Verifiez les donnees, la pertinence des sollicitations et le droit d'opposition.
+
+Ce prototype est une demonstration integrable au travail de Charly ;
+la disponibilite de la recherche web n'a pas pu etre testee en conditions reseau dans l'environnement de generation.

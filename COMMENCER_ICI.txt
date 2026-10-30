@@ -1,0 +1,27 @@
+PROSPECTIA - WINDOWS - DIAGNOSTIC RECHERCHE
+======================================
+
+IMPORTANT : NE LANCEZ PAS LE .BAT DIRECTEMENT DEPUIS LE ZIP.
+
+1) Clic droit sur ProspectIA_Diagnostic_Recherche.zip > Extraire tout.
+2) Ouvrez le dossier extrait, contenant INSTALLER_ET_LANCER.bat,
+   requirements.txt, serveur.py et index.html.
+3) Double-cliquez sur INSTALLER_ET_LANCER.bat.
+4) Si besoin, installez Python 3 sur https://www.python.org/downloads/
+5) La premiere installation requiert Internet. Ensuite gardez la fenetre noire ouverte.
+6) Ouvrez http://127.0.0.1:8765/ si le navigateur ne s'ouvre pas.
+
+Corrections : le script utilise des chemins absolus et un environnement Python
+local (.venv), ce qui evite de chercher requirements.txt au mauvais endroit.
+Si des fichiers sont manquants, le script explique comment extraire le ZIP.
+
+La recherche de liens publics peut etre limitee par les moteurs web ; elle ne
+scrape pas directement LinkedIn. Les resultats ne sont pas verifies.
+
+NOUVEAU : après une recherche réussie, les profils publics trouvés sont enregistrés automatiquement dans Prospects (sans doublon par lien). Données incertaines laissées vides et fiche à vérifier avant contact.
+
+DIAGNOSTIC SI LA RECHERCHE ECHOUE :
+- Ouvrez http://127.0.0.1:8765/api/health
+- Si server=ok et ddgs=installed, le serveur fonctionne : les moteurs externes peuvent bloquer ou échouer.
+- Après cette mise à jour, le détail technique précis doit apparaître dans le message d’erreur.
+- Fermez les anciennes fenêtres de lancement avant de démarrer cette version, sinon vous risquez d’ouvrir l’ancien serveur sur le port 8765.
