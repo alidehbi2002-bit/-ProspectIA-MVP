@@ -218,11 +218,11 @@ def main(argv: list[str] | None = None) -> None:
         import threading, webbrowser
         import uvicorn
         from .dashboard import create_dashboard
-        url = f"http://127.0.0.1:{args.port}"
+        url = f"http://0.0.0.0"
         print(f"Tableau de bord : {url}  (Ctrl+C pour arrêter)")
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
         uvicorn.run(create_dashboard(s, lambda: make_client(s), lambda: make_client(s, real=True)),
-                    host="127.0.0.1", port=args.port, log_level="warning")
+                    host="0.0.0.0", port=args.port, log_level="warning")
     elif args.cmd == "replies":
         cmd_replies(conn)
     elif args.cmd == "optout":
