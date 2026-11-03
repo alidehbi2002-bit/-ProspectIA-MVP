@@ -91,7 +91,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path == '/api/health':
             try:
                 from ddgs import DDGS
-                return self.send_json(200, {'server': 'ok', 'ddgs': 'installed', 'url': 'http://127.0.0.1:8765/'})
+                return self.send_json(200, {'server': 'ok', 'ddgs': 'installed', 'url': 'http://0.0.0.0/'})
             except ImportError:
                 return self.send_json(503, {'server': 'ok', 'ddgs': 'not installed', 'action': 'Lancez INSTALLER_ET_LANCER.bat'})
         return super().do_GET()
@@ -116,9 +116,9 @@ class Handler(SimpleHTTPRequestHandler):
 if __name__ == '__main__':
     import webbrowser
     logging.basicConfig(level=logging.INFO)
-    httpd = ThreadingHTTPServer(('127.0.0.1', PORT), Handler)
-    print(f'ProspectIA disponible sur http://127.0.0.1:{PORT}/', flush=True)
-    webbrowser.open(f'http://127.0.0.1:{PORT}/')
+    httpd = ThreadingHTTPServer(('0.0.0.0', PORT), Handler)
+    print(f'ProspectIA disponible sur http://0.0.0.0/', flush=True)
+    webbrowser.open(f'http://0.0.0.0/')
     try: httpd.serve_forever()
     except KeyboardInterrupt: pass
     finally: httpd.server_close()
