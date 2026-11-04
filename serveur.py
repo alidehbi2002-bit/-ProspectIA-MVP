@@ -2,6 +2,8 @@
 import json
 import logging
 import os
+import threading
+import time
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
@@ -56,6 +58,12 @@ def geographic_terms(params):
 
 
 def build_queries(params):
+    """Construit une requête ciblée (et au plus une variante élargie).
+
+    L'ancienne version lançait jusqu'à 12 recherches séquentielles. Sur Render,
+    chaque moteur lent multipliait le temps d'attente. Une requête OR permet à
+    DDGS de gérer lui-même ses backends et d'éviter ces allers-retours.
+    """
     project = str(params.get("project", "fund"))
     project = project if project in ROLES else "fund"
     role = str(params.get("role", "")).strip()[:100]
@@ -63,14 +71,37 @@ def build_queries(params):
     company = str(params.get("company", "")).strip()[:100]
     keywords = str(params.get("keywords", "")).strip()[:120]
     places = geographic_terms(params)
-    queries = []
-    # Interroger les termes géographiques séparément améliore la couverture
-    # des profils dont l'entreprise mentionne une ville ou un département.
-    for r in roles:
-        for place in places[:4]:
-            q = f'site:linkedin.com/in/ "{r}" "{place}" {company} {keywords}'
-            queries.append(" ".join(q.split()))
-    return queries
+
+    role_clause = " OR ".join(f'"{r}"' for r in roles)
+    place_clause = " OR ".join(f'"{place}"' for place in places[:4])
+    base = f'site:linkedin.com/in/ ({role_clause}) ({place_clause})'
+    if company:
+        base += f' "{company}"'
+    if keywords:
+        base += f' {keywords}'
+
+    # Une seule recherche normale ; seconde tentative plus large uniquement
+    # si la première ne renvoie aucun profil.
+    broad_places = places[:2]
+    broad_clause = " OR ".join(f'"{place}"' for place in broad_places)
+    broad = f'site:linkedin.com/in/ ({role_clause}) ({broad_clause})'
+    if company:
+        broad += f' "{company}"'
+    if keywords:
+        broad += f' {keywords}'
+    return [" ".join(base.split()), " ".join(broad.split())]
+
+
+# Cache mémoire court : évite de refaire la même recherche lorsqu'un visiteur
+# relance immédiatement le formulaire. Le cache se vide lors d'un redémarrage.
+_SEARCH_CACHE = {}
+_CACHE_LOCK = threading.Lock()
+_CACHE_TTL_SECONDS = 180
+
+
+def _cache_key(params, limit):
+    normalized = {str(k): str(v).strip().lower() for k, v in params.items() if k != "limit"}
+    return json.dumps([normalized, limit], sort_keys=True, ensure_ascii=False)
 
 
 def search_linkedin_index(params, search_func=None):
@@ -79,26 +110,38 @@ def search_linkedin_index(params, search_func=None):
     except (ValueError, TypeError):
         limit = 10
 
+    key = _cache_key(params, limit)
+    now = time.monotonic()
+    with _CACHE_LOCK:
+        cached = _SEARCH_CACHE.get(key)
+        if cached and now - cached[0] < _CACHE_TTL_SECONDS:
+            result = dict(cached[1])
+            result["cached"] = True
+            return result
+        if cached:
+            _SEARCH_CACHE.pop(key, None)
+
     if search_func is None:
         try:
             from ddgs import DDGS
         except ImportError as exc:
-            raise RuntimeError("Le module ddgs n'est pas installé. Lancez INSTALLER_ET_LANCER.bat.") from exc
-        engine = DDGS(timeout=20)
-        # Ne pas dépendre d'un seul fournisseur : certains bloquent ou
-        # deviennent temporairement injoignables selon le réseau.
-        # DDGS essaie les moteurs dans l'ordre et passe au suivant en cas d'échec.
-        search_func = lambda query, count: engine.text(
-            query, region="fr-fr", max_results=count,
-            backend="google,duckduckgo,bing,mojeek,yahoo"
-        )
+            raise RuntimeError("Le module ddgs n'est pas installé. Vérifiez requirements.txt puis redéployez.") from exc
+
+        # backend=auto est recommandé par DDGS : la bibliothèque choisit ses
+        # fournisseurs disponibles et agrège les résultats en interne.
+        # Un timeout court évite qu'un fournisseur bloque toute la requête.
+        def search_func(query, count):
+            with DDGS(timeout=8) as engine:
+                return engine.text(query, region="fr-fr", max_results=count, backend="auto")
 
     found, seen, errors = [], set(), []
-    for query in build_queries(params):
+    started = time.monotonic()
+    queries = build_queries(params)
+    for query_index, query in enumerate(queries):
         try:
             records = search_func(query, min(limit + 5, 15)) or []
         except Exception as exc:
-            logging.warning("Recherche DDGS échouée : %s", exc)
+            logging.warning("Recherche DDGS (%s/%s) échouée : %s", query_index + 1, len(queries), exc)
             errors.append(str(exc))
             continue
 
@@ -117,14 +160,34 @@ def search_linkedin_index(params, search_func=None):
                 break
         if len(found) >= limit:
             break
+        # Si la première requête n'a rien donné, une variante élargie est
+        # tentée. Si elle a déjà renvoyé des profils, on conserve ces résultats
+        # plutôt que d'ajouter plusieurs secondes d'attente.
+        if found:
+            break
 
+    elapsed_ms = round((time.monotonic() - started) * 1000)
     if not found and errors:
         raise RuntimeError(
-            "Aucun moteur DDGS n'a répondu (Google, DuckDuckGo, Bing, Mojeek, Yahoo). "
-            + "Dernière erreur : " + errors[-1][:220]
-            + ". Vérifiez l'accès Internet, le pare-feu ou le proxy, puis réessayez."
+            "Les moteurs de recherche sont temporairement injoignables depuis l'hébergement. "
+            "La recherche a été limitée à 2 tentatives pour éviter une attente trop longue. "
+            "Dernière erreur : " + errors[-1][:180]
         )
-    return {"results": found, "count": len(found), "verified": False}
+
+    result = {
+        "results": found,
+        "count": len(found),
+        "verified": False,
+        "cached": False,
+        "elapsed_ms": elapsed_ms,
+    }
+    with _CACHE_LOCK:
+        # Limite la mémoire du cache en conservant les 100 entrées récentes.
+        if len(_SEARCH_CACHE) >= 100:
+            oldest = min(_SEARCH_CACHE, key=lambda k: _SEARCH_CACHE[k][0])
+            _SEARCH_CACHE.pop(oldest, None)
+        _SEARCH_CACHE[key] = (time.monotonic(), result)
+    return result
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -144,7 +207,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path == "/api/health":
             try:
                 import ddgs  # noqa: F401
-                self.send_json(200, {"server": "ok", "ddgs": "installed"})
+                self.send_json(200, {"server": "ok", "ddgs": "installed", "search_backend": "auto", "search_timeout_seconds": 8, "cache_ttl_seconds": _CACHE_TTL_SECONDS})
             except ImportError:
                 self.send_json(503, {"server": "ok", "ddgs": "not installed"})
             return

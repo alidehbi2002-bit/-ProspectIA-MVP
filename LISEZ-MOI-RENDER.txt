@@ -34,3 +34,18 @@ IMPORTANT :
 - La recherche DDGS dépend de moteurs tiers et de leur disponibilité. Render
   ne garantit pas que tous les moteurs accepteront les requêtes.
 - L'application ne se connecte pas à LinkedIn et n'envoie pas de messages.
+
+
+OPTIMISATION DE LA RECHERCHE (version rapide)
+- Une requête groupée remplace les anciennes séries de requêtes séquentielles.
+- DDGS utilise backend=auto, recommandé par sa documentation, pour gérer les moteurs disponibles.
+- Timeout DDGS : 8 secondes ; au plus 2 tentatives par recherche.
+- Cache mémoire de 3 minutes pour les recherches identiques.
+- L'interface arrête d'attendre après 25 secondes et affiche une erreur lisible.
+- Le temps de recherche et l'utilisation du cache sont affichés quand une recherche aboutit.
+
+Après mise à jour des fichiers sur GitHub, vérifiez dans Render > Events que le
+nouveau déploiement est terminé avec le statut Live. Consultez ensuite Logs si
+les moteurs restent injoignables. Sur l'offre Free, Render peut mettre le service
+en veille après 15 minutes sans trafic ; le premier réveil peut prendre environ
+une minute, indépendamment du temps de recherche DDGS.
