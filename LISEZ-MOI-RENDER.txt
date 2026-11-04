@@ -1,0 +1,36 @@
+DEPLOIEMENT DE PROSPECTIA SUR RENDER
+
+Le dossier contient render.yaml. Pour que Render le détecte automatiquement,
+placez le contenu de ce dossier à la racine d'un dépôt GitHub.
+
+1. Créez un dépôt GitHub (par exemple prospectia).
+2. Téléversez à la racine du dépôt : index.html, serveur.py, requirements.txt,
+   render.yaml, .gitignore et les fichiers d'aide.
+3. Sur Render, choisissez New > Blueprint.
+4. Connectez GitHub, sélectionnez le dépôt, puis Apply.
+5. Attendez la fin du déploiement et ouvrez l'adresse *.onrender.com affichée.
+
+Configuration Render déjà déclarée dans render.yaml :
+- service Web Python
+- installation de requirements.txt
+- démarrage avec python serveur.py
+- contrôle de santé sur /api/health
+- offre Free
+
+Si vous créez le service manuellement au lieu d'utiliser Blueprint :
+- New > Web Service
+- Build Command : pip install -r requirements.txt
+- Start Command : python serveur.py
+- Health Check Path : /api/health
+- aucune Publish Directory : ce n'est pas un site statique.
+
+IMPORTANT :
+- L'application doit écouter sur 0.0.0.0 et sur le port fourni par Render ;
+  serveur.py le fait automatiquement sur Render.
+- Les prospects sont conservés dans le stockage local du navigateur. Ils ne
+  sont donc pas partagés entre plusieurs utilisateurs ou appareils.
+- L'offre gratuite peut mettre le service en veille après une période
+  d'inactivité ; le premier accès suivant peut prendre un peu plus de temps.
+- La recherche DDGS dépend de moteurs tiers et de leur disponibilité. Render
+  ne garantit pas que tous les moteurs accepteront les requêtes.
+- L'application ne se connecte pas à LinkedIn et n'envoie pas de messages.
