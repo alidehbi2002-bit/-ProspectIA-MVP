@@ -169,15 +169,21 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(503, {"error": str(exc)})
 
 
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-    print(f"ProspectIA disponible sur http://127.0.0.1:{PORT}/", flush=True)
-    try:
-        import webbrowser
-        webbrowser.open(f"http://127.0.0.1:{PORT}/")
-    except Exception:
-        pass
+    # Render exige une écoute sur toutes les interfaces réseau. En local,
+    # on conserve une écoute limitée à la machine.
+    on_render = bool(os.environ.get("RENDER") or os.environ.get("PORT"))
+    host = "0.0.0.0" if on_render else "127.0.0.1"
+    server = ThreadingHTTPServer((host, PORT), Handler)
+    print(f"ProspectIA disponible sur http://{host}:{PORT}/", flush=True)
+    if not on_render:
+        try:
+            import webbrowser
+            webbrowser.open(f"http://127.0.0.1:{PORT}/")
+        except Exception:
+            pass
     try:
         server.serve_forever()
     except KeyboardInterrupt:
