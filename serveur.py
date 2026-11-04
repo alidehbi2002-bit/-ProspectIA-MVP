@@ -28,18 +28,48 @@ def normalize_linkedin_profile(url):
         return None
 
 
+DEPARTMENTS = {
+    "75": ("Paris", "Paris"),
+    "77": ("Seine-et-Marne", "Seine et Marne"),
+    "78": ("Yvelines", "Versailles"),
+    "91": ("Essonne", "Évry-Courcouronnes"),
+    "92": ("Hauts-de-Seine", "La Défense"),
+    "93": ("Seine-Saint-Denis", "Saint-Denis"),
+    "94": ("Val-de-Marne", "Créteil"),
+    "95": ("Val-d'Oise", "Cergy"),
+}
+
+
+def geographic_terms(params):
+    scope = str(params.get("geo_scope", "yvelines")).strip().lower()
+    if scope == "idf":
+        return ["Île-de-France", "Yvelines", "Paris", "Hauts-de-Seine"]
+    if scope == "department":
+        code = str(params.get("department", "78"))
+        name, city = DEPARTMENTS.get(code, DEPARTMENTS["78"])
+        return [name, city, code]
+    if scope == "custom":
+        location = str(params.get("location", "")).strip()[:100]
+        return [location] if location else ["Yvelines"]
+    return ["Yvelines", "78", "Versailles", "Saint-Germain-en-Laye"]
+
+
 def build_queries(params):
     project = str(params.get("project", "fund"))
     project = project if project in ROLES else "fund"
     role = str(params.get("role", "")).strip()[:100]
     roles = [role] if role else ROLES[project][:3]
-    location = str(params.get("location", "France")).strip()[:100] or "France"
     company = str(params.get("company", "")).strip()[:100]
     keywords = str(params.get("keywords", "")).strip()[:120]
-    return [
-        f'site:linkedin.com/in/ "{r}" "{location}" {company} {keywords}'.strip()
-        for r in roles
-    ]
+    places = geographic_terms(params)
+    queries = []
+    # Interroger les termes géographiques séparément améliore la couverture
+    # des profils dont l'entreprise mentionne une ville ou un département.
+    for r in roles:
+        for place in places[:4]:
+            q = f'site:linkedin.com/in/ "{r}" "{place}" {company} {keywords}'
+            queries.append(" ".join(q.split()))
+    return queries
 
 
 def search_linkedin_index(params, search_func=None):
@@ -53,9 +83,13 @@ def search_linkedin_index(params, search_func=None):
             from ddgs import DDGS
         except ImportError as exc:
             raise RuntimeError("Le module ddgs n'est pas installé. Lancez INSTALLER_ET_LANCER.bat.") from exc
-        engine = DDGS(timeout=15)
+        engine = DDGS(timeout=20)
+        # Ne pas dépendre d'un seul fournisseur : certains bloquent ou
+        # deviennent temporairement injoignables selon le réseau.
+        # DDGS essaie les moteurs dans l'ordre et passe au suivant en cas d'échec.
         search_func = lambda query, count: engine.text(
-            query, region="fr-fr", max_results=count, backend="auto"
+            query, region="fr-fr", max_results=count,
+            backend="google,duckduckgo,bing,mojeek,yahoo"
         )
 
     found, seen, errors = [], set(), []
@@ -85,8 +119,9 @@ def search_linkedin_index(params, search_func=None):
 
     if not found and errors:
         raise RuntimeError(
-            "Le moteur DDGS n'a pas répondu : " + errors[0][:220]
-            + ". Vérifiez la connexion et réessayez plus tard."
+            "Aucun moteur DDGS n'a répondu (Google, DuckDuckGo, Bing, Mojeek, Yahoo). "
+            + "Dernière erreur : " + errors[-1][:220]
+            + ". Vérifiez l'accès Internet, le pare-feu ou le proxy, puis réessayez."
         )
     return {"results": found, "count": len(found), "verified": False}
 

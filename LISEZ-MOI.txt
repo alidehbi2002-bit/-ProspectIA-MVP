@@ -1,8 +1,8 @@
-PROSPECTIA — VERSION SIMPLIFIÉE
+PROSPECTIA — VERSION AVEC RECHERCHE GÉOGRAPHIQUE
 
 Contenu :
 - index.html : interface de recherche et liste de prospects
-- serveur.py : serveur local et recherche DDGS de profils LinkedIn publics
+- serveur.py : serveur local et recherche DDGS de profils LinkedIn publics indexés
 - requirements.txt : dépendances
 - INSTALLER_ET_LANCER.bat : installation et lancement sous Windows
 
@@ -11,14 +11,29 @@ Installation :
 2. Double-cliquez sur INSTALLER_ET_LANCER.bat.
 3. Le navigateur s'ouvre sur http://127.0.0.1:8765/
 
+Recherche géographique :
+- Yvelines (78) — sélection par défaut et priorité de recherche.
+- Toute l'Île-de-France.
+- Choix d'un département : 75, 77, 78, 91, 92, 93, 94 ou 95.
+- Autre localisation en saisie libre.
+
 Fonctionnement :
-- Recherchez des profils publics indexés à partir d'une fonction, d'une entreprise et d'une localisation.
+- Recherchez des profils publics indexés à partir d'une fonction, d'une entreprise et d'une zone géographique.
 - Ajoutez les profils pertinents à votre liste.
 - Complétez le nom, le poste, l'entreprise et les informations utiles.
 - Le message proposé est généré à partir des champs de la fiche. Vous pouvez le modifier, le copier et ouvrir le profil LinkedIn.
 
 Important :
-- Les résultats des moteurs de recherche peuvent être anciens ou inexacts.
+- La localisation est utilisée comme terme de recherche dans le moteur web. Elle ne permet pas de certifier que l'employeur possède un établissement dans le département choisi.
+- Les résultats des moteurs de recherche peuvent être anciens ou inexacts. Vérifiez l'employeur et son implantation avant de contacter un profil.
 - L'application ne se connecte pas à LinkedIn, ne scrape pas les pages LinkedIn et n'envoie aucun message.
 - Les prospects sont stockés dans le navigateur utilisé (localStorage). Utilisez l'export CSV pour conserver une copie.
 - Le message est une suggestion à vérifier avant tout envoi. Respectez les règles LinkedIn, les règles applicables à la prospection et les oppositions.
+
+
+Dépannage DDGS :
+- La recherche utilise plusieurs moteurs en secours (Google, DuckDuckGo, Bing, Mojeek et Yahoo) au lieu de dépendre uniquement de Brave.
+- Si tous échouent avec ConnectError, vérifiez que le navigateur accède à Internet, puis autorisez python.exe dans le pare-feu/antivirus et désactivez temporairement tout proxy/VPN qui filtre les recherches.
+- Dans PowerShell, testez : Invoke-WebRequest https://www.google.com -UseBasicParsing
+- Mettez à jour DDGS depuis le dossier du projet : .\.venv\Scripts\python.exe -m pip install --upgrade ddgs
+- Fermez puis relancez INSTALLER_ET_LANCER.bat.
