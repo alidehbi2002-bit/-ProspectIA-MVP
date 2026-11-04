@@ -32,10 +32,8 @@ Important :
 
 
 Dépannage DDGS :
-- La recherche utilise DDGS en mode automatique (`backend=auto`) afin de laisser la bibliothèque sélectionner les moteurs disponibles. Une requête groupée évite les longues séries de recherches séquentielles.
+- La recherche utilise plusieurs moteurs en secours (Google, DuckDuckGo, Bing, Mojeek et Yahoo) au lieu de dépendre uniquement de Brave.
 - Si tous échouent avec ConnectError, vérifiez que le navigateur accède à Internet, puis autorisez python.exe dans le pare-feu/antivirus et désactivez temporairement tout proxy/VPN qui filtre les recherches.
 - Dans PowerShell, testez : Invoke-WebRequest https://www.google.com -UseBasicParsing
 - Mettez à jour DDGS depuis le dossier du projet : .\.venv\Scripts\python.exe -m pip install --upgrade ddgs
 - Fermez puis relancez INSTALLER_ET_LANCER.bat.
-
-Optimisation Render : délai DDGS de 8 secondes, au plus deux requêtes ciblées, cache de 3 minutes pour les recherches identiques et arrêt côté navigateur après 25 secondes.
