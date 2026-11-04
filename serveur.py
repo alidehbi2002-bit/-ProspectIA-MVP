@@ -8,12 +8,12 @@ from urllib.parse import urlsplit, urlunsplit
 
 ROOT = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORT", "8765"))
-
 ROLES = {
     "fund": ["responsable mécénat", "responsable RSE", "responsable partenariats", "directeur fondation"],
     "corner": ["responsable ressources humaines", "responsable QVT", "responsable services généraux", "responsable événementiel"],
     "custom": ["responsable partenariats", "directeur", "responsable communication"],
 }
+SEARCH_BACKENDS = ("yahoo", "startpage", "brave", "duckduckgo")
 
 
 def normalize_linkedin_profile(url):
@@ -30,14 +30,10 @@ def normalize_linkedin_profile(url):
 
 
 DEPARTMENTS = {
-    "75": ("Paris", "Paris"),
-    "77": ("Seine-et-Marne", "Seine et Marne"),
-    "78": ("Yvelines", "Versailles"),
-    "91": ("Essonne", "Évry-Courcouronnes"),
-    "92": ("Hauts-de-Seine", "La Défense"),
-    "93": ("Seine-Saint-Denis", "Saint-Denis"),
-    "94": ("Val-de-Marne", "Créteil"),
-    "95": ("Val-d'Oise", "Cergy"),
+    "75": ("Paris", "Paris"), "77": ("Seine-et-Marne", "Seine et Marne"),
+    "78": ("Yvelines", "Versailles"), "91": ("Essonne", "Évry-Courcouronnes"),
+    "92": ("Hauts-de-Seine", "La Défense"), "93": ("Seine-Saint-Denis", "Saint-Denis"),
+    "94": ("Val-de-Marne", "Créteil"), "95": ("Val-d'Oise", "Cergy"),
 }
 
 
@@ -62,15 +58,10 @@ def build_queries(params):
     roles = [role] if role else ROLES[project][:3]
     company = str(params.get("company", "")).strip()[:100]
     keywords = str(params.get("keywords", "")).strip()[:120]
-    places = geographic_terms(params)
-    queries = []
-    # Interroger les termes géographiques séparément améliore la couverture
-    # des profils dont l'entreprise mentionne une ville ou un département.
-    for r in roles:
-        for place in places[:4]:
-            q = f'site:linkedin.com/in/ "{r}" "{place}" {company} {keywords}'
-            queries.append(" ".join(q.split()))
-    return queries
+    return [
+        " ".join(f'site:linkedin.com/in/ "{r}" "{place}" {company} {keywords}'.split())
+        for r in roles for place in geographic_terms(params)[:4]
+    ]
 
 
 def search_linkedin_index(params, search_func=None):
@@ -83,25 +74,41 @@ def search_linkedin_index(params, search_func=None):
         try:
             from ddgs import DDGS
         except ImportError as exc:
-            raise RuntimeError("Le module ddgs n'est pas installé. Lancez INSTALLER_ET_LANCER.bat.") from exc
-        engine = DDGS(timeout=20)
-        # Ne pas dépendre d'un seul fournisseur : certains bloquent ou
-        # deviennent temporairement injoignables selon le réseau.
-        # DDGS essaie les moteurs dans l'ordre et passe au suivant en cas d'échec.
-        search_func = lambda query, count: engine.text(
-            query, region="fr-fr", max_results=count,
-            backend="google,duckduckgo,bing,mojeek,yahoo"
-        )
+            raise RuntimeError("Le module ddgs n'est pas installé. Vérifiez requirements.txt.") from exc
+        engine = DDGS(timeout=12)
 
-    found, seen, errors = [], set(), []
+        def search_func(query, count):
+            # Chaque backend est essayé séparément pour isoler les blocages réseau.
+            for backend in SEARCH_BACKENDS:
+                try:
+                    records = engine.text(
+                        query, region="fr-fr", max_results=count, backend=backend
+                    ) or []
+                    valid_records = [
+                        item for item in records
+                        if isinstance(item, dict)
+                        and normalize_linkedin_profile(item.get("href") or item.get("url"))
+                    ]
+                    if valid_records:
+                        logging.info(
+                            "DDGS backend=%s : %s profil(s) LinkedIn exploitable(s)",
+                            backend, len(valid_records)
+                        )
+                        return valid_records
+                    logging.info(
+                        "DDGS backend=%s : aucun profil LinkedIn exploitable", backend
+                    )
+                except Exception as exc:
+                    logging.warning("DDGS backend=%s échoué : %s", backend, exc)
+            return []
+
+    found, seen = [], set()
     for query in build_queries(params):
         try:
             records = search_func(query, min(limit + 5, 15)) or []
         except Exception as exc:
-            logging.warning("Recherche DDGS échouée : %s", exc)
-            errors.append(str(exc))
+            logging.warning("Recherche échouée pour une requête : %s", exc)
             continue
-
         for item in records:
             if not isinstance(item, dict):
                 continue
@@ -117,13 +124,6 @@ def search_linkedin_index(params, search_func=None):
                 break
         if len(found) >= limit:
             break
-
-    if not found and errors:
-        raise RuntimeError(
-            "Aucun moteur DDGS n'a répondu (Google, DuckDuckGo, Bing, Mojeek, Yahoo). "
-            + "Dernière erreur : " + errors[-1][:220]
-            + ". Vérifiez l'accès Internet, le pare-feu ou le proxy, puis réessayez."
-        )
     return {"results": found, "count": len(found), "verified": False}
 
 
@@ -144,7 +144,8 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path == "/api/health":
             try:
                 import ddgs  # noqa: F401
-                self.send_json(200, {"server": "ok", "ddgs": "installed"})
+                self.send_json(200, {"server": "ok", "ddgs": "installed",
+                                     "search_backends": list(SEARCH_BACKENDS)})
             except ImportError:
                 self.send_json(503, {"server": "ok", "ddgs": "not installed"})
             return
@@ -170,11 +171,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(503, {"error": str(exc)})
 
 
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    # Render exige une écoute sur toutes les interfaces réseau. En local,
-    # on conserve une écoute limitée à la machine.
     on_render = bool(os.environ.get("RENDER") or os.environ.get("PORT"))
     host = "0.0.0.0" if on_render else "127.0.0.1"
     server = ThreadingHTTPServer((host, PORT), Handler)
@@ -188,6 +186,6 @@ if __name__ == "__main__":
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\\nArrêt de ProspectIA.")
+        print("\nArrêt de ProspectIA.")
     finally:
         server.server_close()
