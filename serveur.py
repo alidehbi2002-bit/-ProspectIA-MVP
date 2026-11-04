@@ -1,118 +1,3 @@
-"""Serveur local ProspectIA : recherche de profils LinkedIn publics indexés."""
-import json
-import logging
-import os
-from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
-from pathlib import Path
-from urllib.parse import urlsplit, urlunsplit
-
-ROOT = Path(__file__).resolve().parent
-PORT = int(os.environ.get("PORT", "8765"))
-ROLES = {
-    "fund": ["responsable mécénat", "responsable RSE", "responsable partenariats", "directeur fondation"],
-    "corner": ["responsable ressources humaines", "responsable QVT", "responsable services généraux", "responsable événementiel"],
-    "custom": ["responsable partenariats", "directeur", "responsable communication"],
-}
-SEARCH_BACKENDS = ("yahoo", "startpage", "brave", "duckduckgo")
-
-
-def normalize_linkedin_profile(url):
-    try:
-        u = urlsplit(str(url))
-        host = (u.hostname or "").lower()
-        if u.scheme != "https" or not (host == "linkedin.com" or host.endswith(".linkedin.com")):
-            return None
-        if not u.path.startswith("/in/") or not u.path.split("/in/", 1)[1].strip("/"):
-            return None
-        return urlunsplit(("https", host, u.path.rstrip("/"), "", ""))
-    except Exception:
-        return None
-
-
-DEPARTMENTS = {
-    "75": ("Paris", "Paris"), "77": ("Seine-et-Marne", "Seine et Marne"),
-    "78": ("Yvelines", "Versailles"), "91": ("Essonne", "Évry-Courcouronnes"),
-    "92": ("Hauts-de-Seine", "La Défense"), "93": ("Seine-Saint-Denis", "Saint-Denis"),
-    "94": ("Val-de-Marne", "Créteil"), "95": ("Val-d'Oise", "Cergy"),
-}
-
-
-def geographic_terms(params):
-    scope = str(params.get("geo_scope", "yvelines")).strip().lower()
-    if scope == "idf":
-        return ["Île-de-France", "Yvelines", "Paris", "Hauts-de-Seine"]
-    if scope == "department":
-        code = str(params.get("department", "78"))
-        name, city = DEPARTMENTS.get(code, DEPARTMENTS["78"])
-        return [name, city, code]
-    if scope == "custom":
-        location = str(params.get("location", "")).strip()[:100]
-        return [location] if location else ["Yvelines"]
-    return ["Yvelines", "78", "Versailles", "Saint-Germain-en-Laye"]
-
-
-def build_queries(params):
-    project = str(params.get("project", "fund"))
-    project = project if project in ROLES else "fund"
-    role = str(params.get("role", "")).strip()[:100]
-    roles = [role] if role else ROLES[project][:3]
-    company = str(params.get("company", "")).strip()[:100]
-    keywords = str(params.get("keywords", "")).strip()[:120]
-    return [
-        " ".join(f'site:linkedin.com/in/ "{r}" "{place}" {company} {keywords}'.split())
-        for r in roles for place in geographic_terms(params)[:4]
-    ]
-
-
-def search_linkedin_index(params, search_func=None):
-    try:
-        limit = min(20, max(1, int(params.get("limit", 10))))
-    except (ValueError, TypeError):
-        limit = 10
-
-    if search_func is None:
-        try:
-            from ddgs import DDGS
-        except ImportError as exc:
-            raise RuntimeError("Le module ddgs n'est pas installé. Vérifiez requirements.txt.") from exc
-        engine = DDGS(timeout=12)
-
-        def search_func(query, count):
-            # Chaque backend est essayé séparément pour isoler les blocages réseau.
-            for backend in SEARCH_BACKENDS:
-                try:
-                    records = engine.text(
-                        query, region="fr-fr", max_results=count, backend=backend
-                    ) or []
-                    valid_records = [
-                        item for item in records
-                        if isinstance(item, dict)
-                        and normalize_linkedin_profile(item.get("href") or item.get("url"))
-                    ]
-                    if valid_records:
-                        logging.info(
-                            "DDGS backend=%s : %s profil(s) LinkedIn exploitable(s)",
-                            backend, len(valid_records)
-                        )
-                        return valid_records
-                    logging.info(
-                        "DDGS backend=%s : aucun profil LinkedIn exploitable", backend
-                    )
-                except Exception as exc:
-                    logging.warning("DDGS backend=%s échoué : %s", backend, exc)
-            return []
-
-    found, seen = [], set()
-    for query in build_queries(params):
-        try:
-            records = search_func(query, min(limit + 5, 15)) or []
-        except Exception as exc:
-            logging.warning("Recherche échouée pour une requête : %s", exc)
-            continue
-        for item in records:
-            if not isinstance(item, dict):
-                continue
-            url = normalize_linkedin_profile(item.get("href") or item.get("url"))
             if not url or url in seen:
                 continue
             seen.add(url)
@@ -124,7 +9,23 @@ def search_linkedin_index(params, search_func=None):
                 break
         if len(found) >= limit:
             break
-    return {"results": found, "count": len(found), "verified": False}
+
+    response = {
+        "results": found,
+        "count": len(found),
+        "verified": False,
+        "queries_used": len(queries),
+        "search_backends": list(SEARCH_BACKENDS),
+    }
+    # Si chaque tentative moteur a échoué par exception, renvoyer une vraie erreur
+    # plutôt qu'un succès HTTP 200 qui ressemble à une recherche sans résultat.
+    if uses_ddgs and backend_calls and len(backend_errors) >= backend_calls:
+        response["error"] = "Tous les moteurs de recherche ont échoué ou bloqué les requêtes. Réessayez plus tard."
+        response["backend_errors"] = backend_errors[-10:]
+        response["status"] = "search_unavailable"
+    else:
+        response["status"] = "ok" if found else "no_results"
+    return response
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -144,8 +45,10 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path == "/api/health":
             try:
                 import ddgs  # noqa: F401
-                self.send_json(200, {"server": "ok", "ddgs": "installed",
-                                     "search_backends": list(SEARCH_BACKENDS)})
+                self.send_json(200, {
+                    "server": "ok", "ddgs": "installed",
+                    "search_backends": list(SEARCH_BACKENDS),
+                })
             except ImportError:
                 self.send_json(503, {"server": "ok", "ddgs": "not installed"})
             return
@@ -163,7 +66,11 @@ class Handler(SimpleHTTPRequestHandler):
             params = json.loads(self.rfile.read(length))
             if not isinstance(params, dict):
                 raise ValueError("Les paramètres doivent être un objet JSON.")
-            self.send_json(200, search_linkedin_index(params))
+            result = search_linkedin_index(params)
+            if result.get("status") == "search_unavailable":
+                self.send_json(503, result)
+            else:
+                self.send_json(200, result)
         except (ValueError, json.JSONDecodeError) as exc:
             self.send_json(400, {"error": str(exc)})
         except Exception as exc:
