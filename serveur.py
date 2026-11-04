@@ -1,12 +1,13 @@
 """Serveur local ProspectIA : recherche de profils LinkedIn publics indexés."""
 import json
 import logging
+import os
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
 ROOT = Path(__file__).resolve().parent
-PORT = 8765
+PORT = int(os.environ.get("PORT", "8765"))
 
 ROLES = {
     "fund": ["responsable mécénat", "responsable RSE", "responsable partenariats", "directeur fondation"],
