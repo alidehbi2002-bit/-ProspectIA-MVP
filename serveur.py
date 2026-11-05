@@ -17,7 +17,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
-from dotenv import load_dotenv
+
 
 # ============================================================
 # CONFIGURATION
@@ -32,12 +32,6 @@ CACHE_TTL_SECONDS = 1800
 
 MAX_RESULTS = 20
 
-
-# Charger les variables du fichier .env
-load_dotenv()
-
-# Récupérer la clé API OpenAI
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # ============================================================
 # RÔLES PAR TYPE DE PROJET
