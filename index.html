@@ -223,6 +223,10 @@ button {cursor:pointer}
     background:#f8f9ff;
 }
 
+.person.visited {
+    border-left:4px solid var(--green);
+}
+
 .person-main {min-width:0;flex:1}
 
 .person-title {
@@ -275,6 +279,16 @@ button {cursor:pointer}
     color:#69768a;
 }
 
+.tag.visited {
+    background:#e5f7ef;
+    color:#167453;
+}
+
+.tag.not-visited {
+    background:#f0f2f6;
+    color:#69768a;
+}
+
 .empty {
     padding:28px 12px;
     text-align:center;
@@ -300,6 +314,10 @@ button {cursor:pointer}
 .prospect.active {
     border-color:#8292e9;
     background:#f7f8ff;
+}
+
+.prospect.visited {
+    border-left:4px solid var(--green);
 }
 
 .prospect b {font-size:12px}
@@ -440,6 +458,17 @@ button {cursor:pointer}
     color:#93651f;
 }
 
+.visited-info {
+    background:#edfaf5;
+    border:1px solid #d7efe5;
+    color:#287a64;
+    border-radius:9px;
+    padding:10px 12px;
+    font-size:11px;
+    line-height:1.6;
+    margin-bottom:12px;
+}
+
 #search-button {width:100%;padding:12px}
 
 @media(max-width:900px) {
@@ -485,11 +514,6 @@ button {cursor:pointer}
     </nav>
 </header>
 
-
-<!-- =====================================================
-     RECHERCHE
-===================================================== -->
-
 <section id="search-view">
 
 <div class="layout">
@@ -514,26 +538,19 @@ l'entreprise et la localisation géographique.
 </select>
 </div>
 
-
 <div class="field">
 <label>Zone géographique des profils</label>
 <select name="geo_scope" id="geo-scope">
-
     <option value="yvelines" selected>Yvelines (78)</option>
     <option value="idf">Toute l'Île-de-France</option>
     <option value="department">Choisir un département</option>
     <option value="custom">Autre localisation (texte libre)</option>
-
 </select>
 </div>
 
-
 <div class="field hidden" id="department-field">
-
 <label>Département à cibler</label>
-
 <select name="department" id="department-select">
-
     <option value="75">75 — Paris</option>
     <option value="77">77 — Seine-et-Marne</option>
     <option value="78" selected>78 — Yvelines</option>
@@ -542,51 +559,41 @@ l'entreprise et la localisation géographique.
     <option value="93">93 — Seine-Saint-Denis</option>
     <option value="94">94 — Val-de-Marne</option>
     <option value="95">95 — Val-d'Oise</option>
-
 </select>
 </div>
-
 
 <div class="field hidden" id="custom-location-field">
 <label>Ville, département ou région</label>
 <input name="location" placeholder="Ex. Versailles, 78, Normandie…">
 </div>
 
-
 <div id="geo-mode-info" class="notice">
 Le filtrage géographique strict est activé pour les recherches départementales.
 Les profils sans localisation identifiable seront écartés.
 </div>
-
 
 <div class="field">
 <label>Entreprise (facultatif)</label>
 <input name="company" placeholder="Nom de l'entreprise">
 </div>
 
-
 <div class="field">
 <label>Fonction recherchée</label>
-
 <select name="role" id="role-select">
     <option value="">Tous les rôles du projet</option>
 </select>
-
 <small id="role-count" class="muted"></small>
 </div>
-
 
 <div class="field">
 <label>Ou saisir une fonction personnalisée</label>
 <input id="custom-role" type="text" placeholder="Ex. Directeur des partenariats">
 </div>
 
-
 <div class="field">
 <label>Mots-clés complémentaires (facultatif)</label>
-<input name="keywords" placeholder="engagement, fondation, partenariats…">
+<input name="keywords" placeholder="engagement, fondation, levée de fonds…">
 </div>
-
 
 <div class="field">
 <label>Nombre maximum de résultats</label>
@@ -598,13 +605,11 @@ Les profils sans localisation identifiable seront écartés.
 </select>
 </div>
 
-
 <button class="btn primary" id="search-button" type="submit">
 ⌕ Lancer la recherche
 </button>
 
 </form>
-
 
 <div class="notice">
 Les résultats proviennent de Tavily et de profils LinkedIn publics indexés sur le web.
@@ -613,30 +618,29 @@ de recherche. Elle ne constitue pas une vérification indépendante de la locali
 actuelle de la personne.
 </div>
 
+<div class="visited-info">
+    <strong>Suivi des visites LinkedIn</strong><br>
+    ProspectIA mémorise les profils ouverts depuis cette interface.
+    Les profils déjà visités seront signalés lors des prochaines recherches.
+    <br>
+    <span id="visited-total">0 profil déjà visité.</span>
+</div>
+
 <div id="search-error"></div>
 
 </section>
 
-
-<!-- =====================================================
-     RÉSULTATS
-===================================================== -->
-
 <section class="panel">
 
 <div class="results-head">
-
 <div>
 <h2>Résultats de recherche</h2>
 <p class="desc" style="margin:5px 0 0">
 Profils retenus après filtrage géographique.
 </p>
 </div>
-
 <span class="count" id="result-count">0 résultat</span>
-
 </div>
-
 
 <div id="search-summary" class="hidden">
 
@@ -663,24 +667,16 @@ Profils retenus après filtrage géographique.
 
 </div>
 
-
 <div id="results" class="list">
-
 <div class="empty">
 Lancez une recherche pour afficher les profils trouvés.
 </div>
-
 </div>
 
 </section>
 
 </div>
 </section>
-
-
-<!-- =====================================================
-     LISTE DES PROSPECTS
-===================================================== -->
 
 <section id="prospects-view" class="hidden">
 
@@ -689,32 +685,31 @@ Lancez une recherche pour afficher les profils trouvés.
 <section class="panel">
 
 <div class="results-head">
-
 <div>
 <h2>Vos prospects</h2>
 <p class="desc" style="margin:5px 0 0">
 Sélectionnez une fiche pour compléter ses informations.
 </p>
 </div>
-
 <span class="count" id="prospect-count">0 prospect</span>
-
 </div>
-
 
 <div class="toolbar">
-
 <input id="prospect-filter" placeholder="Filtrer par nom, entreprise, poste…">
-
 <button class="btn small" id="export-btn">Exporter CSV</button>
-
 </div>
 
+<div class="toolbar">
+<select id="visited-filter" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:9px">
+    <option value="all">Tous les prospects</option>
+    <option value="visited">Déjà visités</option>
+    <option value="not-visited">Pas encore visités</option>
+</select>
+</div>
 
 <div id="prospect-list"></div>
 
 </section>
-
 
 <section class="panel">
 
@@ -726,11 +721,9 @@ et reste entièrement modifiable.
 </p>
 
 <div id="editor">
-
 <div class="empty">
 Sélectionnez un prospect dans la liste ou ajoutez-en un depuis les résultats.
 </div>
-
 </div>
 
 </section>
@@ -739,7 +732,6 @@ Sélectionnez un prospect dans la liste ou ajoutez-en un depuis les résultats.
 </section>
 
 </div>
-
 
 <script>
 (() => {
@@ -747,6 +739,7 @@ Sélectionnez un prospect dans la liste ou ajoutez-en un depuis les résultats.
 'use strict';
 
 const KEY = 'prospectia_contacts_v2';
+const VISITED_KEY = 'prospectia_visited_profiles_v1';
 
 const $ = selector => document.querySelector(selector);
 
@@ -761,7 +754,6 @@ const safe = value => String(value ?? '').replace(
     }[char])
 );
 
-
 const DEPARTMENT_NAMES = {
     '75':'Paris',
     '77':'Seine-et-Marne',
@@ -772,7 +764,6 @@ const DEPARTMENT_NAMES = {
     '94':'Val-de-Marne',
     '95':"Val-d'Oise"
 };
-
 
 const ROLE_CATALOG = {
 
@@ -791,9 +782,9 @@ fund: [
     "directeur de fondation",
     "directeur fondation",
     "responsable fondation",
-    "chargé de mécénat",
-    "responsable mécénat",
-    "directeur mécénat",
+    "chargé de levée de fonds",
+    "responsable levée de fonds",
+    "directeur levée de fonds",
     "responsable partenariats",
     "directeur partenariats",
     "responsable partenariats financiers",
@@ -807,7 +798,7 @@ fund: [
     "responsable développement philanthropique",
     "responsable financement",
     "directeur financement",
-    "chargé de fundraising",
+    "chargé de levée de fonds",
     "chargé de développement",
     "responsable communication et collecte",
     "directeur administratif et financier"
@@ -877,7 +868,7 @@ custom: [
     "directeur développement",
     "responsable affaires publiques",
     "directeur affaires publiques",
-    "responsable mécénat",
+    "responsable levée de fonds",
     "responsable RSE",
     "responsable événementiel",
     "responsable expérience client",
@@ -891,6 +882,9 @@ custom: [
 
 };
 
+/* =====================================================
+   STOCKAGE
+===================================================== */
 
 function loadProspects() {
     try {
@@ -901,12 +895,109 @@ function loadProspects() {
     }
 }
 
+function loadVisitedProfiles() {
+    try {
+        const data = JSON.parse(localStorage.getItem(VISITED_KEY) || '{}');
+        return data && typeof data === 'object' ? data : {};
+    } catch {
+        return {};
+    }
+}
 
 let prospects = loadProspects();
+let visitedProfiles = loadVisitedProfiles();
+
 let results = [];
 let activeId = null;
 let lastSearch = null;
 
+/*
+ * Normalise les URL LinkedIn pour éviter de compter deux fois
+ * un même profil lorsque les paramètres de suivi changent.
+ */
+function normalizeLinkedInUrl(url) {
+
+    if (!url) return '';
+
+    try {
+
+        const parsed = new URL(url.trim());
+
+        if (
+            !parsed.hostname.toLowerCase().includes('linkedin.com')
+        ) {
+            return url.trim().replace(/\/+$/, '').toLowerCase();
+        }
+
+        let pathname = parsed.pathname
+            .replace(/\/+$/, '')
+            .toLowerCase();
+
+        return 'https://www.linkedin.com' + pathname;
+
+    } catch {
+
+        return url.trim()
+            .split('?')[0]
+            .split('#')[0]
+            .replace(/\/+$/, '')
+            .toLowerCase();
+
+    }
+}
+
+function isVisited(url) {
+
+    const normalized = normalizeLinkedInUrl(url);
+
+    if (!normalized) return false;
+
+    return Boolean(visitedProfiles[normalized]);
+
+}
+
+function markVisited(url, title = '') {
+
+    const normalized = normalizeLinkedInUrl(url);
+
+    if (!normalized) return false;
+
+    if (visitedProfiles[normalized]) {
+        return false;
+    }
+
+    visitedProfiles[normalized] = {
+        url:normalized,
+        title:title || '',
+        visited_at:new Date().toISOString()
+    };
+
+    localStorage.setItem(
+        VISITED_KEY,
+        JSON.stringify(visitedProfiles)
+    );
+
+    updateVisitedCounters();
+
+    return true;
+}
+
+function getVisitedCount() {
+    return Object.keys(visitedProfiles).length;
+}
+
+function updateVisitedCounters() {
+
+    const count = getVisitedCount();
+
+    const element = $('#visited-total');
+
+    if (element) {
+        element.textContent =
+            count + ' profil(s) déjà visité(s) dans cet historique.';
+    }
+
+}
 
 function save() {
 
@@ -914,8 +1005,13 @@ function save() {
 
     $('#nav-count').textContent = prospects.length;
 
+    updateVisitedCounters();
+
 }
 
+/* =====================================================
+   OUTILS
+===================================================== */
 
 function toast(message) {
 
@@ -930,19 +1026,15 @@ function toast(message) {
 
 }
 
-
 function getGeoScope() {
     return $('#geo-scope').value;
 }
-
 
 function getSelectedDepartment() {
 
     const scope = getGeoScope();
 
-    if (scope === 'yvelines') {
-        return '78';
-    }
+    if (scope === 'yvelines') return '78';
 
     if (scope === 'department') {
         return $('#department-select').value;
@@ -951,30 +1043,25 @@ function getSelectedDepartment() {
     return null;
 }
 
-
 function getGeoDescription() {
 
     const scope = getGeoScope();
     const department = getSelectedDepartment();
 
     if (department) {
-
         return {
             name:DEPARTMENT_NAMES[department],
             code:department,
             strict:true
         };
-
     }
 
     if (scope === 'idf') {
-
         return {
             name:"Île-de-France",
             code:null,
             strict:false
         };
-
     }
 
     const location = $('#search-form').elements.location.value.trim();
@@ -987,11 +1074,13 @@ function getGeoDescription() {
 
 }
 
+/* =====================================================
+   GÉOGRAPHIE
+===================================================== */
 
 function updateGeoInformation() {
 
     const scope = getGeoScope();
-
     const info = $('#geo-mode-info');
 
     $('#department-field').classList.toggle(
@@ -1035,18 +1124,18 @@ function updateGeoInformation() {
 
 }
 
-
 $('#geo-scope').addEventListener('change', updateGeoInformation);
 
 updateGeoInformation();
 
+/* =====================================================
+   RÔLES
+===================================================== */
 
 function updateRoleOptions() {
 
     const project = $('#search-form').elements.project.value;
-
     const roles = ROLE_CATALOG[project] || [];
-
     const select = $('#role-select');
 
     const previousValue = select.value;
@@ -1080,12 +1169,10 @@ function updateRoleOptions() {
 
 }
 
-
 $('#search-form').elements.project.addEventListener(
     'change',
     updateRoleOptions
 );
-
 
 $('#custom-role').addEventListener('input', function() {
 
@@ -1095,7 +1182,6 @@ $('#custom-role').addEventListener('input', function() {
 
 });
 
-
 $('#role-select').addEventListener('change', function() {
 
     if (this.value) {
@@ -1104,9 +1190,11 @@ $('#role-select').addEventListener('change', function() {
 
 });
 
-
 updateRoleOptions();
 
+/* =====================================================
+   NAVIGATION
+===================================================== */
 
 function show(view) {
 
@@ -1135,7 +1223,6 @@ function show(view) {
 
 }
 
-
 document.querySelectorAll('[data-view]').forEach(button => {
 
     button.addEventListener('click', () => {
@@ -1144,11 +1231,9 @@ document.querySelectorAll('[data-view]').forEach(button => {
 
 });
 
-
 /* =====================================================
    RÉSULTATS DE RECHERCHE
 ===================================================== */
-
 
 function renderSearchSummary(data) {
 
@@ -1183,7 +1268,6 @@ function renderSearchSummary(data) {
 
 }
 
-
 function renderResults() {
 
     $('#result-count').textContent =
@@ -1201,10 +1285,10 @@ function renderResults() {
 
     }
 
-
     $('#results').innerHTML = results.map((result, index) => {
 
         const isGeoVerified = result.location_verified === true;
+        const alreadyVisited = isVisited(result.url);
 
         const department = result.department
             ? result.department +
@@ -1213,7 +1297,7 @@ function renderResults() {
 
         return `
 
-        <article class="person">
+        <article class="person ${alreadyVisited ? 'visited' : ''}">
 
             <div class="person-main">
 
@@ -1226,7 +1310,8 @@ function renderResults() {
                 </div>
 
                 <div>
-                    <span class="tag success">
+
+                    <span class="tag ${isGeoVerified ? 'success' : 'warning'}">
                         ${isGeoVerified
                             ? '✓ Correspondance géographique'
                             : 'Zone non vérifiée'}
@@ -1235,6 +1320,13 @@ function renderResults() {
                     <span class="tag">
                         ${safe(department)}
                     </span>
+
+                    <span class="tag ${alreadyVisited ? 'visited' : 'not-visited'}">
+                        ${alreadyVisited
+                            ? '✓ Déjà visité'
+                            : '○ Pas encore visité'}
+                    </span>
+
                 </div>
 
                 <div class="geo-result ${isGeoVerified ? 'accepted' : 'unknown'}">
@@ -1245,10 +1337,21 @@ function renderResults() {
 
                 </div>
 
+                ${alreadyVisited ? `
+                    <div class="visited-info">
+                        Ce profil a déjà été ouvert depuis ProspectIA.
+                        ${visitedProfiles[normalizeLinkedInUrl(result.url)]?.visited_at
+                            ? 'Date : ' + safe(new Date(
+                                visitedProfiles[normalizeLinkedInUrl(result.url)].visited_at
+                              ).toLocaleString('fr-FR'))
+                            : ''}
+                    </div>
+                ` : ''}
+
                 <div class="person-actions">
 
                     <button class="btn small" data-open="${index}">
-                        Ouvrir le profil
+                        ${alreadyVisited ? '↗ Ouvrir à nouveau' : '↗ Ouvrir le profil'}
                     </button>
 
                     <button class="btn small primary" data-add="${index}">
@@ -1267,6 +1370,9 @@ function renderResults() {
 
 }
 
+/* =====================================================
+   AJOUT DES PROSPECTS
+===================================================== */
 
 function addResult(index) {
 
@@ -1275,8 +1381,16 @@ function addResult(index) {
     if (!result) return;
 
     const url = result.url || '';
+    const normalizedUrl = normalizeLinkedInUrl(url);
 
-    if (prospects.some(prospect => prospect.linkedin === url)) {
+    if (!normalizedUrl) {
+        toast('Aucun lien LinkedIn valide pour ce profil.');
+        return;
+    }
+
+    if (prospects.some(
+        prospect => normalizeLinkedInUrl(prospect.linkedin) === normalizedUrl
+    )) {
 
         toast('Ce profil est déjà dans votre liste.');
 
@@ -1312,7 +1426,11 @@ function addResult(index) {
 
         location_evidence:result.location_evidence || '',
 
-        search_date:new Date().toISOString()
+        search_date:new Date().toISOString(),
+
+        visited:isVisited(url),
+
+        visited_at:visitedProfiles[normalizedUrl]?.visited_at || ''
 
     };
 
@@ -1326,6 +1444,81 @@ function addResult(index) {
 
 }
 
+/* =====================================================
+   OUVERTURE ET MARQUAGE DES PROFILS
+===================================================== */
+
+function openLinkedInProfile(url, title = '') {
+
+    if (!url) {
+        toast('Aucun lien LinkedIn disponible.');
+        return;
+    }
+
+    let parsed;
+
+    try {
+        parsed = new URL(url);
+    } catch {
+        toast('Le lien du profil est invalide.');
+        return;
+    }
+
+    if (
+        !['linkedin.com','www.linkedin.com','fr.linkedin.com']
+            .includes(parsed.hostname.toLowerCase()) &&
+        !parsed.hostname.toLowerCase().endsWith('.linkedin.com')
+    ) {
+        toast('Ce lien ne semble pas être un profil LinkedIn.');
+        return;
+    }
+
+    const wasAlreadyVisited = isVisited(url);
+
+    const openedWindow = window.open(
+        url,
+        '_blank',
+        'noopener,noreferrer'
+    );
+
+    /*
+     * La visite est mémorisée au clic sur le bouton.
+     * Cela ne vérifie pas que la page LinkedIn a réellement chargé.
+     */
+    markVisited(url, title);
+
+    const prospect = prospects.find(
+        item => normalizeLinkedInUrl(item.linkedin) === normalizeLinkedInUrl(url)
+    );
+
+    if (prospect) {
+
+        prospect.visited = true;
+
+        prospect.visited_at =
+            visitedProfiles[normalizeLinkedInUrl(url)].visited_at;
+
+        save();
+
+    }
+
+    renderResults();
+
+    if (openedWindow === null) {
+        toast('Profil marqué comme visité. Vérifiez le blocage des fenêtres pop-up.');
+    } else if (wasAlreadyVisited) {
+        toast('Ce profil avait déjà été visité.');
+    } else {
+        toast('Profil ouvert et visite enregistrée.');
+    }
+
+    if (!$('#prospects-view').classList.contains('hidden')) {
+        renderProspects();
+
+        if (activeId) renderEditor();
+    }
+
+}
 
 $('#results').addEventListener('click', event => {
 
@@ -1337,7 +1530,7 @@ $('#results').addEventListener('click', event => {
         const result = results[Number(openButton.dataset.open)];
 
         if (result && result.url) {
-            window.open(result.url, '_blank', 'noopener');
+            openLinkedInProfile(result.url, result.title);
         }
 
     }
@@ -1348,11 +1541,9 @@ $('#results').addEventListener('click', event => {
 
 });
 
-
 /* =====================================================
    LANCEMENT DE LA RECHERCHE
 ===================================================== */
-
 
 $('#search-form').onsubmit = async event => {
 
@@ -1392,8 +1583,6 @@ $('#search-form').onsubmit = async event => {
 
     }
 
-
-    // Préparation de l'affichage.
     $('#search-button').disabled = true;
 
     $('#search-button').textContent = 'Recherche en cours…';
@@ -1405,11 +1594,9 @@ $('#search-form').onsubmit = async event => {
     $('#results').innerHTML =
         '<div class="empty">Recherche des profils publics et vérification des correspondances géographiques…</div>';
 
-
     results = [];
 
     lastSearch = null;
-
 
     try {
 
@@ -1425,23 +1612,18 @@ $('#search-form').onsubmit = async event => {
 
         });
 
-
         const data = await response.json();
 
         if (!response.ok) {
             throw new Error(data.error || 'Recherche indisponible');
         }
 
-
         results = Array.isArray(data.results)
             ? data.results
             : [];
 
-
         lastSearch = data;
 
-
-        // Vérification de cohérence du département.
         if (
             geo.strict &&
             data.department_code &&
@@ -1455,11 +1637,9 @@ $('#search-form').onsubmit = async event => {
 
         }
 
-
         renderSearchSummary(data);
 
         renderResults();
-
 
         $('#result-count').textContent =
             (data.count || 0) +
@@ -1467,11 +1647,15 @@ $('#search-form').onsubmit = async event => {
             (data.queries_used || 0) +
             ' recherche(s) Tavily';
 
+        const visitedInResults = results.filter(
+            result => isVisited(result.url)
+        ).length;
 
         if (data.count > 0) {
 
             toast(
-                data.count + ' profil(s) retenu(s) après filtrage.'
+                data.count + ' profil(s) retenu(s), dont ' +
+                visitedInResults + ' déjà visité(s).'
             );
 
         } else {
@@ -1480,14 +1664,12 @@ $('#search-form').onsubmit = async event => {
 
         }
 
-
         if (data.cached) {
 
             $('#search-geo-info').innerHTML +=
                 '<br><strong>Résultats issus du cache.</strong>';
 
         }
-
 
     } catch (error) {
 
@@ -1513,19 +1695,18 @@ $('#search-form').onsubmit = async event => {
 
 };
 
-
 /* =====================================================
    LISTE DES PROSPECTS
 ===================================================== */
 
-
 function renderProspects() {
 
     const query = $('#prospect-filter').value.toLowerCase();
+    const visitedFilter = $('#visited-filter').value;
 
     const filtered = prospects.filter(prospect => {
 
-        return [
+        const matchesQuery = [
 
             prospect.name,
             prospect.company,
@@ -1536,18 +1717,34 @@ function renderProspects() {
 
         ].join(' ').toLowerCase().includes(query);
 
-    });
+        const visited = isVisited(prospect.linkedin);
 
+        const matchesVisited =
+            visitedFilter === 'all' ||
+            (visitedFilter === 'visited' && visited) ||
+            (visitedFilter === 'not-visited' && !visited);
+
+        return matchesQuery && matchesVisited;
+
+    });
 
     $('#prospect-count').textContent =
         prospects.length + ' prospect(s)';
 
-
     $('#prospect-list').innerHTML = filtered.length
 
-        ? filtered.map(prospect => `
+        ? filtered.map(prospect => {
 
-            <div class="prospect ${prospect.id === activeId ? 'active' : ''}"
+            const visited = isVisited(prospect.linkedin);
+
+            const visitDate =
+                visitedProfiles[normalizeLinkedInUrl(prospect.linkedin)]?.visited_at;
+
+            return `
+
+            <div class="prospect
+                        ${prospect.id === activeId ? 'active' : ''}
+                        ${visited ? 'visited' : ''}"
                  data-select="${safe(prospect.id)}">
 
                 <b>${safe(prospect.name || 'Nom à compléter')}</b>
@@ -1577,14 +1774,25 @@ function renderProspects() {
                         </span>
                     ` : ''}
 
+                    <span class="tag ${visited ? 'visited' : 'not-visited'}">
+                        ${visited ? '✓ Déjà visité' : '○ Pas encore visité'}
+                    </span>
+
                 </div>
+
+                ${visited && visitDate ? `
+                    <small>
+                        Visité le ${safe(new Date(visitDate).toLocaleString('fr-FR'))}
+                    </small>
+                ` : ''}
 
             </div>
 
-        `).join('')
+            `;
 
-        : '<div class="empty">Aucun prospect. Faites une recherche puis ajoutez les profils pertinents.</div>';
+        }).join('')
 
+        : '<div class="empty">Aucun prospect correspondant à ce filtre.</div>';
 
     $('#prospect-list').querySelectorAll('[data-select]').forEach(element => {
 
@@ -1602,14 +1810,12 @@ function renderProspects() {
 
 }
 
-
 $('#prospect-filter').oninput = renderProspects;
-
+$('#visited-filter').onchange = renderProspects;
 
 /* =====================================================
    GÉNÉRATION DU MESSAGE
 ===================================================== */
-
 
 function getMessage(prospect) {
 
@@ -1636,13 +1842,11 @@ function getMessage(prospect) {
 
             : 'un projet associatif';
 
-
     const hook = prospect.notes
 
         ? ` J’ai également relevé les éléments suivants : ${prospect.notes.slice(0,180)}.`
 
         : '';
-
 
     return `Bonjour ${first},
 
@@ -1658,11 +1862,9 @@ Bien cordialement,
 
 }
 
-
 /* =====================================================
    ÉDITION DE LA FICHE PROSPECT
 ===================================================== */
-
 
 function renderEditor() {
 
@@ -1677,11 +1879,17 @@ function renderEditor() {
 
     }
 
-
     const departmentName = prospect.department ||
         DEPARTMENT_NAMES[prospect.department_code] ||
         'Non renseigné';
 
+    const normalizedUrl = normalizeLinkedInUrl(prospect.linkedin);
+
+    const visited = isVisited(prospect.linkedin);
+
+    const visitedDate = visited
+        ? visitedProfiles[normalizedUrl]?.visited_at
+        : '';
 
     $('#editor').innerHTML = `
 
@@ -1703,73 +1911,67 @@ function renderEditor() {
 
     </div>
 
+    <div class="${visited ? 'visited-info' : 'notice warning'}">
+
+        <strong>Suivi de la visite LinkedIn</strong>
+
+        <br>
+
+        ${visited
+            ? '✓ Ce profil a déjà été ouvert depuis ProspectIA.'
+            : '○ Ce profil n’a pas encore été ouvert depuis ProspectIA.'}
+
+        ${visitedDate
+            ? '<br>Date de visite : ' +
+              safe(new Date(visitedDate).toLocaleString('fr-FR'))
+            : ''}
+
+    </div>
 
     <form id="prospect-form">
 
         <div class="field">
-
             <label>Nom / intitulé du profil</label>
-
             <input name="name"
                    value="${safe(prospect.name)}"
                    placeholder="Prénom Nom">
-
         </div>
 
-
         <div class="field">
-
             <label>Entreprise</label>
-
             <input name="company"
                    value="${safe(prospect.company)}"
                    placeholder="Entreprise actuelle">
-
         </div>
-
 
         <div class="row">
 
             <div class="field">
-
                 <label>Fonction</label>
-
                 <input name="role"
                        value="${safe(prospect.role)}"
                        placeholder="Responsable RSE…">
-
             </div>
 
-
             <div class="field">
-
                 <label>Localisation</label>
-
                 <input name="location"
                        value="${safe(prospect.location)}"
                        placeholder="Ville à confirmer">
-
             </div>
 
         </div>
 
-
         <div class="field">
-
             <label>Email (facultatif)</label>
-
             <input name="email"
                    type="email"
                    value="${safe(prospect.email)}"
                    placeholder="prenom@entreprise.fr">
-
         </div>
 
-
         <div class="field">
-
             <label>Projet</label>
-
             <select name="project">
 
                 <option value="fund" ${prospect.project === 'fund' ? 'selected' : ''}>
@@ -1785,29 +1987,19 @@ function renderEditor() {
                 </option>
 
             </select>
-
         </div>
 
-
         <div class="field">
-
             <label>Informations utiles pour personnaliser le message</label>
-
             <textarea name="notes"
                       placeholder="Ex. engagement RSE, actualité de l'entreprise, intérêt commun…">${safe(prospect.notes)}</textarea>
-
         </div>
-
 
         <div class="field">
-
             <label>Lien LinkedIn</label>
-
             <input name="linkedin"
                    value="${safe(prospect.linkedin)}">
-
         </div>
-
 
         <div class="row">
 
@@ -1827,9 +2019,7 @@ function renderEditor() {
 
     </form>
 
-
     <hr style="border:0;border-top:1px solid var(--line);margin:20px 0">
-
 
     <h2 style="font-size:14px">Message LinkedIn proposé</h2>
 
@@ -1838,13 +2028,9 @@ function renderEditor() {
         Vérifiez les éléments avant de l'utiliser.
     </p>
 
-
     <div class="message-box">
-
         <textarea id="generated-message">${safe(getMessage(prospect))}</textarea>
-
     </div>
-
 
     <div class="message-actions">
 
@@ -1860,8 +2046,11 @@ function renderEditor() {
             Ouvrir le profil
         </button>
 
-    </div>
+        <button class="btn" id="reset-visited">
+            Réinitialiser le statut de visite
+        </button>
 
+    </div>
 
     <p class="muted" style="margin-top:12px">
         Aucun message n'est envoyé automatiquement.
@@ -1869,7 +2058,6 @@ function renderEditor() {
     </p>
 
     `;
-
 
     $('#prospect-form').onsubmit = event => {
 
@@ -1879,7 +2067,20 @@ function renderEditor() {
             new FormData(event.currentTarget)
         );
 
+        const oldUrl = prospect.linkedin;
+
         Object.assign(prospect, data);
+
+        /*
+         * Si le lien est modifié, on conserve l'historique
+         * de l'ancien profil sans transférer sa visite au nouveau.
+         */
+        if (
+            normalizeLinkedInUrl(oldUrl) !==
+            normalizeLinkedInUrl(prospect.linkedin)
+        ) {
+            prospect.visited = isVisited(prospect.linkedin);
+        }
 
         save();
 
@@ -1891,7 +2092,6 @@ function renderEditor() {
 
     };
 
-
     $('#regenerate').onclick = () => {
 
         $('#generated-message').value = getMessage(prospect);
@@ -1899,7 +2099,6 @@ function renderEditor() {
         toast('Message régénéré à partir de la fiche.');
 
     };
-
 
     $('#copy-message').onclick = async () => {
 
@@ -1919,30 +2118,51 @@ function renderEditor() {
 
     };
 
-
     const openProfile = () => {
 
         if (prospect.linkedin) {
-
-            window.open(
-                prospect.linkedin,
-                '_blank',
-                'noopener'
-            );
-
+            openLinkedInProfile(prospect.linkedin, prospect.name);
         } else {
-
             toast('Aucun lien LinkedIn renseigné.');
-
         }
 
     };
 
-
     $('#open-profile').onclick = openProfile;
-
     $('#open-linkedin').onclick = openProfile;
 
+    $('#reset-visited').onclick = () => {
+
+        if (!visited) {
+            toast('Ce profil n’est pas marqué comme visité.');
+            return;
+        }
+
+        if (!confirm('Retirer ce profil de l’historique des visites ?')) {
+            return;
+        }
+
+        delete visitedProfiles[normalizedUrl];
+
+        localStorage.setItem(
+            VISITED_KEY,
+            JSON.stringify(visitedProfiles)
+        );
+
+        prospect.visited = false;
+        prospect.visited_at = '';
+
+        updateVisitedCounters();
+
+        renderProspects();
+
+        renderEditor();
+
+        renderResults();
+
+        toast('Statut de visite réinitialisé.');
+
+    };
 
     $('#delete-prospect').onclick = () => {
 
@@ -1968,11 +2188,9 @@ function renderEditor() {
 
 }
 
-
 /* =====================================================
    EXPORT CSV
 ===================================================== */
-
 
 $('#export-btn').onclick = () => {
 
@@ -1987,29 +2205,40 @@ $('#export-btn').onclick = () => {
         'email',
         'project',
         'linkedin',
+        'visited',
+        'visited_at',
         'notes'
     ];
-
 
     const csv = [
 
         columns.join(';'),
 
-        ...prospects.map(prospect =>
+        ...prospects.map(prospect => {
 
-            columns.map(key => {
+            const visited = isVisited(prospect.linkedin);
 
-                const value = String(prospect[key] ?? '')
+            const visitDate =
+                visitedProfiles[normalizeLinkedInUrl(prospect.linkedin)]?.visited_at || '';
+
+            const values = {
+                ...prospect,
+                visited:visited ? 'Oui' : 'Non',
+                visited_at:visitDate
+            };
+
+            return columns.map(key => {
+
+                const value = String(values[key] ?? '')
                     .replaceAll('"', '""');
 
                 return '"' + value + '"';
 
-            }).join(';')
+            }).join(';');
 
-        )
+        })
 
     ].join('\r\n');
-
 
     const blob = new Blob(
         ['\ufeff' + csv],
@@ -2032,13 +2261,13 @@ $('#export-btn').onclick = () => {
 
 };
 
-
 /* =====================================================
    INITIALISATION
 ===================================================== */
 
-
 save();
+
+updateVisitedCounters();
 
 renderProspects();
 
