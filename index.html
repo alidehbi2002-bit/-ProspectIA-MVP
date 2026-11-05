@@ -1,89 +1,776 @@
 <!doctype html>
 <html lang="fr">
+
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ProspectIA — Recherche & prospects</title>
-<style>
-:root{--navy:#142238;--blue:#5269dc;--bg:#f4f6fb;--line:#e4e9f1;--muted:#77849a;--text:#243247;--green:#16866c}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px Inter,Segoe UI,Arial,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}.app{max-width:1450px;margin:auto;padding:28px}.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:25px}.brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#91a3ff,#4d62d3);display:grid;place-items:center;color:white;font-size:21px;font-weight:bold}.brand h1{font-size:20px;margin:0}.brand p{font-size:11px;color:var(--muted);letter-spacing:1.3px;margin:3px 0}.tabs{display:flex;gap:8px}.tab,.btn{border:1px solid var(--line);background:white;border-radius:9px;padding:10px 14px;color:var(--text);font-weight:650}.tab.active,.btn.primary{background:var(--blue);border-color:var(--blue);color:white}.layout{display:grid;grid-template-columns:minmax(320px,.85fr) minmax(0,1.5fr);gap:18px}.panel{background:white;border:1px solid var(--line);border-radius:15px;padding:21px;box-shadow:0 6px 24px #1a315008}.panel h2{font-size:16px;margin:0 0 6px}.desc{color:var(--muted);font-size:12px;line-height:1.6;margin:0 0 18px}.field{display:flex;flex-direction:column;gap:7px;margin-bottom:13px}.field label{font-size:11px;font-weight:700;color:#5c6a80}.field input,.field select,.field textarea{border:1px solid #dce3ed;border-radius:8px;padding:11px;background:#fff;color:var(--text);width:100%;outline:none}.field textarea{min-height:100px;resize:vertical;line-height:1.6}.field input:focus,.field textarea:focus,.field select:focus{border-color:#8191e8}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row .field{flex:1;min-width:130px}.btn{font-size:12px}.btn:disabled{opacity:.45;cursor:not-allowed}.notice{background:#f0f4ff;color:#5d6d9b;border:1px solid #e1e8ff;border-radius:9px;padding:11px 13px;font-size:11px;line-height:1.6;margin-top:13px}.notice.error{background:#fff1f2;color:#a54c5d;border-color:#f5d9de}.notice.good{background:#edfaf5;color:#287a64;border-color:#d7efe5}.results-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}.count{font-size:11px;color:var(--muted)}.list{display:flex;flex-direction:column;gap:9px}.person{border:1px solid var(--line);border-radius:11px;padding:13px;display:flex;gap:12px;align-items:flex-start}.person.selected{border-color:#8998eb;background:#f8f9ff}.person input{margin-top:4px}.person-main{min-width:0;flex:1}.person-title{font-weight:700;font-size:13px}.person-sub{font-size:11px;color:var(--muted);margin-top:5px;overflow-wrap:anywhere;line-height:1.5}.person-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.small{padding:6px 9px;font-size:10px}.tag{font-size:10px;padding:5px 8px;background:#eff2ff;color:#5668bd;border-radius:20px}.empty{padding:28px 12px;text-align:center;color:#8b97a9;font-size:12px;line-height:1.6}.prospect-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.9fr);gap:18px}.prospect{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer}.prospect.active{border-color:#8292e9;background:#f7f8ff}.prospect b{font-size:12px}.prospect small{display:block;color:var(--muted);margin-top:4px;font-size:10px}.toolbar{display:flex;gap:8px;margin-bottom:12px}.toolbar input{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:9px}.hidden{display:none!important}.message-box{background:#fbfcff;border:1px solid var(--line);border-radius:10px;padding:14px}.message-box textarea{width:100%;min-height:280px;border:0;background:transparent;resize:vertical;outline:none;line-height:1.7;color:#344258}.message-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.muted{color:var(--muted);font-size:11px}.status{font-size:10px;color:var(--green);font-weight:700}.top-right{display:flex;gap:8px;align-items:center}.toast{position:fixed;bottom:20px;right:20px;background:#142238;color:#fff;padding:12px 16px;border-radius:10px;font-size:12px;max-width:360px}
-@media(max-width:900px){.layout,.prospect-layout{grid-template-columns:1fr}.app{padding:17px}.top{align-items:flex-start;gap:12px;flex-direction:column}.tabs{width:100%}.tab{flex:1}}
-</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>ProspectIA — Recherche & prospects</title>
+    <style>
+        :root {
+            --navy: #142238;
+            --blue: #5269dc;
+            --bg: #f4f6fb;
+            --line: #e4e9f1;
+            --muted: #77849a;
+            --text: #243247;
+            --green: #16866c
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font: 14px Inter, Segoe UI, Arial, sans-serif
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit
+        }
+
+        button {
+            cursor: pointer
+        }
+
+        .app {
+            max-width: 1450px;
+            margin: auto;
+            padding: 28px
+        }
+
+        .top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 13px;
+            background: linear-gradient(135deg, #91a3ff, #4d62d3);
+            display: grid;
+            place-items: center;
+            color: white;
+            font-size: 21px;
+            font-weight: bold
+        }
+
+        .brand h1 {
+            font-size: 20px;
+            margin: 0
+        }
+
+        .brand p {
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: 1.3px;
+            margin: 3px 0
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px
+        }
+
+        .tab,
+        .btn {
+            border: 1px solid var(--line);
+            background: white;
+            border-radius: 9px;
+            padding: 10px 14px;
+            color: var(--text);
+            font-weight: 650
+        }
+
+        .tab.active,
+        .btn.primary {
+            background: var(--blue);
+            border-color: var(--blue);
+            color: white
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(320px, .85fr) minmax(0, 1.5fr);
+            gap: 18px
+        }
+
+        .panel {
+            background: white;
+            border: 1px solid var(--line);
+            border-radius: 15px;
+            padding: 21px;
+            box-shadow: 0 6px 24px #1a315008
+        }
+
+        .panel h2 {
+            font-size: 16px;
+            margin: 0 0 6px
+        }
+
+        .desc {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+            margin: 0 0 18px
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-bottom: 13px
+        }
+
+        .field label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #5c6a80
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            border: 1px solid #dce3ed;
+            border-radius: 8px;
+            padding: 11px;
+            background: #fff;
+            color: var(--text);
+            width: 100%;
+            outline: none
+        }
+
+        .field textarea {
+            min-height: 100px;
+            resize: vertical;
+            line-height: 1.6
+        }
+
+        .field input:focus,
+        .field textarea:focus,
+        .field select:focus {
+            border-color: #8191e8
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .row .field {
+            flex: 1;
+            min-width: 130px
+        }
+
+        .btn {
+            font-size: 12px
+        }
+
+        .btn:disabled {
+            opacity: .45;
+            cursor: not-allowed
+        }
+
+        .notice {
+            background: #f0f4ff;
+            color: #5d6d9b;
+            border: 1px solid #e1e8ff;
+            border-radius: 9px;
+            padding: 11px 13px;
+            font-size: 11px;
+            line-height: 1.6;
+            margin-top: 13px
+        }
+
+        .notice.error {
+            background: #fff1f2;
+            color: #a54c5d;
+            border-color: #f5d9de
+        }
+
+        .notice.good {
+            background: #edfaf5;
+            color: #287a64;
+            border-color: #d7efe5
+        }
+
+        .results-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 13px
+        }
+
+        .count {
+            font-size: 11px;
+            color: var(--muted)
+        }
+
+        .list {
+            display: flex;
+            flex-direction: column;
+            gap: 9px
+        }
+
+        .person {
+            border: 1px solid var(--line);
+            border-radius: 11px;
+            padding: 13px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start
+        }
+
+        .person.selected {
+            border-color: #8998eb;
+            background: #f8f9ff
+        }
+
+        .person input {
+            margin-top: 4px
+        }
+
+        .person-main {
+            min-width: 0;
+            flex: 1
+        }
+
+        .person-title {
+            font-weight: 700;
+            font-size: 13px
+        }
+
+        .person-sub {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 5px;
+            overflow-wrap: anywhere;
+            line-height: 1.5
+        }
+
+        .person-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 9px
+        }
+
+        .small {
+            padding: 6px 9px;
+            font-size: 10px
+        }
+
+        .tag {
+            font-size: 10px;
+            padding: 5px 8px;
+            background: #eff2ff;
+            color: #5668bd;
+            border-radius: 20px
+        }
+
+        .empty {
+            padding: 28px 12px;
+            text-align: center;
+            color: #8b97a9;
+            font-size: 12px;
+            line-height: 1.6
+        }
+
+        .prospect-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(320px, .9fr);
+            gap: 18px
+        }
+
+        .prospect {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer
+        }
+
+        .prospect.active {
+            border-color: #8292e9;
+            background: #f7f8ff
+        }
+
+        .prospect b {
+            font-size: 12px
+        }
+
+        .prospect small {
+            display: block;
+            color: var(--muted);
+            margin-top: 4px;
+            font-size: 10px
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px
+        }
+
+        .toolbar input {
+            flex: 1;
+            min-width: 0;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 9px
+        }
+
+        .hidden {
+            display: none !important
+        }
+
+        .message-box {
+            background: #fbfcff;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 14px
+        }
+
+        .message-box textarea {
+            width: 100%;
+            min-height: 280px;
+            border: 0;
+            background: transparent;
+            resize: vertical;
+            outline: none;
+            line-height: 1.7;
+            color: #344258
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 12px
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 11px
+        }
+
+        .status {
+            font-size: 10px;
+            color: var(--green);
+            font-weight: 700
+        }
+
+        .top-right {
+            display: flex;
+            gap: 8px;
+            align-items: center
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #142238;
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 12px;
+            max-width: 360px
+        }
+
+        @media(max-width:900px) {
+
+            .layout,
+            .prospect-layout {
+                grid-template-columns: 1fr
+            }
+
+            .app {
+                padding: 17px
+            }
+
+            .top {
+                align-items: flex-start;
+                gap: 12px;
+                flex-direction: column
+            }
+
+            .tabs {
+                width: 100%
+            }
+
+            .tab {
+                flex: 1
+            }
+        }
+    </style>
 </head>
+
 <body>
-<div class="app">
-<header class="top">
- <div class="brand"><div class="logo">P</div><div><h1>ProspectIA</h1><p>RECHERCHE & PROSPECTION</p></div></div>
- <nav class="tabs"><button class="tab active" data-view="search">Recherche</button><button class="tab" data-view="prospects">Liste des prospects <span id="nav-count">0</span></button></nav>
-</header>
-<section id="search-view">
- <div class="layout">
-  <section class="panel">
-   <h2>Rechercher des profils LinkedIn</h2><p class="desc">Recherchez des profils publics indexés sur le web selon le poste, l'entreprise et la localisation.</p>
-   <form id="search-form">
-    <div class="field"><label>Projet / contexte de prospection</label><select name="project"><option value="fund">Levée de fonds</option><option value="corner">Corners en entreprise</option><option value="custom">Autre projet</option></select></div>
-    <div class="field"><label>Zone géographique des entreprises</label><select name="geo_scope" id="geo-scope"><option value="yvelines" selected>Yvelines (78) — priorité</option><option value="idf">Toute l’Île-de-France</option><option value="department">Choisir un département</option><option value="custom">Autre localisation (texte libre)</option></select></div>
-    <div class="field hidden" id="department-field"><label>Département</label><select name="department"><option value="75">75 — Paris</option><option value="77">77 — Seine-et-Marne</option><option value="78" selected>78 — Yvelines</option><option value="91">91 — Essonne</option><option value="92">92 — Hauts-de-Seine</option><option value="93">93 — Seine-Saint-Denis</option><option value="94">94 — Val-de-Marne</option><option value="95">95 — Val-d’Oise</option></select></div>
-    <div class="field hidden" id="custom-location-field"><label>Ville, département ou région</label><input name="location" value="" placeholder="Ex. Versailles, 78, Normandie…"></div>
-    <div class="field"><label>Entreprise (facultatif)</label><input name="company" placeholder="Nom de l'entreprise"></div>
-    <div class="field"><label>Fonction recherchée</label><input name="role" placeholder="Responsable RSE, mécénat, RH…"></div>
-    <div class="field"><label>Mots-clés complémentaires (facultatif)</label><input name="keywords" placeholder="engagement, fondation, partenariats…"></div>
-    <div class="field"><label>Nombre maximum de résultats</label><select name="limit"><option>5</option><option selected>10</option><option>15</option><option>20</option></select></div>
-    <button class="btn primary" id="search-button" type="submit">⌕ Lancer la recherche</button>
-   </form>
-   <div class="notice">Les résultats proviennent d'un moteur de recherche public. Ils ne sont pas vérifiés en temps réel par LinkedIn. Vérifiez l'identité, le poste et l'entreprise avant toute prise de contact.</div>
-   <div id="search-error"></div>
-  </section>
-  <section class="panel">
-   <div class="results-head"><div><h2>Résultats de recherche</h2><p class="desc" style="margin:5px 0 0">Ajoutez les profils pertinents à votre liste de prospects.</p></div><span class="count" id="result-count">0 résultat</span></div>
-   <div id="results" class="list"><div class="empty">Lancez une recherche pour afficher les profils trouvés.</div></div>
-  </section>
- </div>
-</section>
-<section id="prospects-view" class="hidden">
- <div class="prospect-layout">
-  <section class="panel">
-   <div class="results-head"><div><h2>Vos prospects</h2><p class="desc" style="margin:5px 0 0">Sélectionnez une fiche pour compléter ses informations et générer un message.</p></div><span class="count" id="prospect-count">0 prospect</span></div>
-   <div class="toolbar"><input id="prospect-filter" placeholder="Filtrer par nom, entreprise, poste…"><button class="btn small" id="export-btn">Exporter CSV</button></div>
-   <div id="prospect-list"></div>
-  </section>
-  <section class="panel">
-   <h2>Fiche prospect & message personnalisé</h2><p class="desc">Complétez les informations connues. Le message est adapté à ces données et reste entièrement modifiable.</p>
-   <div id="editor"><div class="empty">Sélectionnez un prospect dans la liste ou ajoutez-en un depuis les résultats de recherche.</div></div>
-  </section>
- </div>
-</section>
-</div>
-<script>
-(()=>{'use strict';
-const KEY='prospectia_contacts_v2';
-let prospects=JSON.parse(localStorage.getItem(KEY)||'[]'),results=[],activeId=null;
-const $=s=>document.querySelector(s),safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const save=()=>{localStorage.setItem(KEY,JSON.stringify(prospects));$('#nav-count').textContent=prospects.length};
-const toast=t=>{let n=document.createElement('div');n.className='toast';n.textContent=t;document.body.append(n);setTimeout(()=>n.remove(),3000)};
-function show(view){$('#search-view').classList.toggle('hidden',view!=='search');$('#prospects-view').classList.toggle('hidden',view!=='prospects');document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='prospects')renderProspects()}
-document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>show(b.dataset.view));
-function addResult(i){let r=results[i];if(!r)return;let url=r.url||'';if(prospects.some(p=>p.linkedin===url)){toast('Ce profil est déjà dans votre liste.');return}
-let p={id:crypto.randomUUID(),name:r.title||'',company:'',role:'',location:'',linkedin:url,project:$('#search-form').elements.project.value,email:'',notes:'Profil repéré via moteur de recherche — informations à vérifier.'};
-prospects.unshift(p);save();renderResults();toast('Prospect ajouté à votre liste.')}
-function renderResults(){ $('#result-count').textContent=results.length+' résultat(s)';$('#results').innerHTML=results.length?results.map((r,i)=>`<article class="person"><div class="person-main"><div class="person-title">${safe(r.title||'Profil public')}</div><div class="person-sub">${safe(r.url)}</div><div class="person-actions"><button class="btn small" data-open="${i}">Ouvrir le profil</button><button class="btn small primary" data-add="${i}">＋ Ajouter à ma liste</button></div></div></article>`).join(''):'<div class="empty">Aucun profil trouvé. Essayez une fonction ou une localisation plus large.</div>'}
-$('#results').addEventListener('click',e=>{let o=e.target.closest('[data-open]'),a=e.target.closest('[data-add]');if(o)window.open(results[+o.dataset.open].url,'_blank','noopener');if(a)addResult(+a.dataset.add)});
-$('#geo-scope').onchange=e=>{$('#department-field').classList.toggle('hidden',e.target.value!=='department');$('#custom-location-field').classList.toggle('hidden',e.target.value!=='custom')};
-$('#search-form').onsubmit=async e=>{e.preventDefault();let f=e.currentTarget,payload=Object.fromEntries(new FormData(f));payload.limit=Number(payload.limit);$('#search-button').disabled=true;$('#search-button').textContent='Recherche en cours…';$('#search-error').innerHTML='';$('#results').innerHTML='<div class="empty">Recherche des profils publics…</div>';
-try{let res=await fetch('/api/linkedin-discovery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});let data=await res.json();if(!res.ok)throw Error(data.error||'Recherche indisponible');results=Array.isArray(data.results)?data.results:[];renderResults()}catch(err){$('#results').innerHTML='<div class="empty">La recherche n’a pas abouti.</div>';$('#search-error').innerHTML=`<div class="notice error">${safe(err.message)}<br>Vérifiez que le serveur Python est lancé et que DDGS est installé.</div>`}finally{$('#search-button').disabled=false;$('#search-button').textContent='⌕ Lancer la recherche'}};
-function renderProspects(){let q=$('#prospect-filter').value.toLowerCase();let list=prospects.filter(p=>[p.name,p.company,p.role,p.location].join(' ').toLowerCase().includes(q));$('#prospect-count').textContent=prospects.length+' prospect(s)';$('#prospect-list').innerHTML=list.length?list.map(p=>`<div class="prospect ${p.id===activeId?'active':''}" data-select="${p.id}"><b>${safe(p.name||'Nom à compléter')}</b><small>${safe(p.role||'Fonction à compléter')} · ${safe(p.company||'Entreprise à confirmer')}</small></div>`).join(''):'<div class="empty">Aucun prospect. Faites une recherche puis ajoutez les profils pertinents.</div>';$('#prospect-list').querySelectorAll('[data-select]').forEach(el=>el.onclick=()=>{activeId=el.dataset.select;renderProspects();renderEditor()})}
-$('#prospect-filter').oninput=renderProspects;
-function getMessage(p){let first=(p.name||'').split(/[|–—-]/)[0].trim().split(' ')[0];if(!first||first.length>30)first='Bonjour';let company=p.company||'votre organisation',role=p.role||'votre fonction';let project=p.project==='corner'?'un projet de corner solidaire au sein des entreprises':p.project==='custom'?'notre projet':'un projet associatif';let hook=p.notes?` J’ai également relevé les éléments suivants : ${p.notes.slice(0,180)}.`:'';return `Bonjour ${first},\n\nJe me permets de vous contacter car votre fonction de ${role} chez ${company} semble en lien avec les sujets que nous souhaitons développer.\n\nNous portons ${project} et cherchons à échanger avec des organisations susceptibles de partager cette démarche.${hook}\n\nSeriez-vous disponible pour un court échange afin de vous présenter l’initiative et voir si elle pourrait faire écho à vos priorités ?\n\nBien cordialement,\n[Votre prénom et nom]\n[Nom de votre structure]`}
-function renderEditor(){let p=prospects.find(x=>x.id===activeId);if(!p){$('#editor').innerHTML='<div class="empty">Sélectionnez un prospect dans la liste.</div>';return}
-$('#editor').innerHTML=`<form id="prospect-form"><div class="field"><label>Nom / intitulé du profil</label><input name="name" value="${safe(p.name)}" placeholder="Prénom Nom"></div><div class="field"><label>Entreprise</label><input name="company" value="${safe(p.company)}" placeholder="Entreprise actuelle"></div><div class="row"><div class="field"><label>Fonction</label><input name="role" value="${safe(p.role)}" placeholder="Responsable RSE…"></div><div class="field"><label>Localisation</label><input name="location" value="${safe(p.location)}" placeholder="Paris"></div></div><div class="field"><label>Email (facultatif)</label><input name="email" type="email" value="${safe(p.email)}" placeholder="prenom@entreprise.fr"></div><div class="field"><label>Projet</label><select name="project"><option value="fund" ${p.project==='fund'?'selected':''}>Levée de fonds</option><option value="corner" ${p.project==='corner'?'selected':''}>Corner en entreprise</option><option value="custom" ${p.project==='custom'?'selected':''}>Autre projet</option></select></div><div class="field"><label>Informations utiles pour personnaliser le message</label><textarea name="notes" placeholder="Ex. engagement RSE, actualité de l'entreprise, intérêt commun…">${safe(p.notes)}</textarea></div><div class="field"><label>Lien LinkedIn</label><input name="linkedin" value="${safe(p.linkedin)}"></div><div class="row"><button class="btn primary" type="submit">Enregistrer la fiche</button><button class="btn" type="button" id="open-profile">Ouvrir LinkedIn</button><button class="btn" type="button" id="delete-prospect">Supprimer</button></div></form><hr style="border:0;border-top:1px solid var(--line);margin:20px 0"><h2 style="font-size:14px">Message LinkedIn proposé</h2><p class="desc">Généré à partir des informations de cette fiche. Vérifiez les éléments avant de l'utiliser.</p><div class="message-box"><textarea id="generated-message">${safe(getMessage(p))}</textarea></div><div class="message-actions"><button class="btn primary" id="regenerate">Régénérer le message</button><button class="btn" id="copy-message">Copier le message</button><button class="btn" id="open-linkedin">Ouvrir le profil</button></div><p class="muted" style="margin-top:12px">Aucun message n'est envoyé automatiquement. Le contenu est une proposition à relire et adapter.</p>`;
-$('#prospect-form').onsubmit=e=>{e.preventDefault();let data=Object.fromEntries(new FormData(e.currentTarget));Object.assign(p,data);save();renderProspects();renderEditor();toast('Fiche prospect enregistrée.')};
-$('#regenerate').onclick=()=>{$('#generated-message').value=getMessage(p);toast('Message régénéré à partir de la fiche.')};
-$('#copy-message').onclick=async()=>{try{await navigator.clipboard.writeText($('#generated-message').value);toast('Message copié.')}catch{toast('Copie indisponible dans ce navigateur.')}};
-const open=()=>{if(p.linkedin)window.open(p.linkedin,'_blank','noopener');else toast('Aucun lien LinkedIn renseigné.')};
-$('#open-profile').onclick=open;$('#open-linkedin').onclick=open;
-$('#delete-prospect').onclick=()=>{if(confirm('Supprimer ce prospect ?')){prospects=prospects.filter(x=>x.id!==p.id);activeId=null;save();renderProspects();renderEditor()}};
-}
-$('#export-btn').onclick=()=>{let cols=['name','company','role','location','email','project','linkedin','notes'];let csv=[cols.join(';'),...prospects.map(p=>cols.map(k=>'"'+String(p[k]||'').replaceAll('"','""')+'"').join(';'))].join('\r\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='prospectia_prospects.csv';a.click();URL.revokeObjectURL(a.href)};
-save();renderProspects();
-})();
-</script>
-</body></html>
+    <div class="app">
+        <header class="top">
+            <div class="brand">
+                <div class="logo">P</div>
+                <div>
+                    <h1>ProspectIA</h1>
+                    <p>RECHERCHE & PROSPECTION</p>
+                </div>
+            </div>
+            <nav class="tabs"><button class="tab active" data-view="search">Recherche</button><button class="tab"
+                    data-view="prospects">Liste des prospects <span id="nav-count">0</span></button></nav>
+        </header>
+        <section id="search-view">
+            <div class="layout">
+                <section class="panel">
+                    <h2>Rechercher des profils LinkedIn</h2>
+                    <p class="desc">Recherchez des profils publics indexés sur le web selon le poste, l'entreprise et la
+                        localisation.</p>
+                    <form id="search-form">
+                        <div class="field"><label>Projet / contexte de prospection</label><select name="project">
+                                <option value="fund">Levée de fonds</option>
+                                <option value="corner">Corners en entreprise</option>
+                                <option value="custom">Autre projet</option>
+                            </select></div>
+                        <div class="field"><label>Zone géographique des entreprises</label><select name="geo_scope"
+                                id="geo-scope">
+                                <option value="yvelines" selected>Yvelines (78) — priorité</option>
+                                <option value="idf">Toute l’Île-de-France</option>
+                                <option value="department">Choisir un département</option>
+                                <option value="custom">Autre localisation (texte libre)</option>
+                            </select></div>
+                        <div class="field hidden" id="department-field"><label>Département</label><select
+                                name="department">
+                                <option value="75">75 — Paris</option>
+                                <option value="77">77 — Seine-et-Marne</option>
+                                <option value="78" selected>78 — Yvelines</option>
+                                <option value="91">91 — Essonne</option>
+                                <option value="92">92 — Hauts-de-Seine</option>
+                                <option value="93">93 — Seine-Saint-Denis</option>
+                                <option value="94">94 — Val-de-Marne</option>
+                                <option value="95">95 — Val-d’Oise</option>
+                            </select></div>
+                        <div class="field hidden" id="custom-location-field"><label>Ville, département ou
+                                région</label><input name="location" value=""
+                                placeholder="Ex. Versailles, 78, Normandie…"></div>
+                        <div class="field"><label>Entreprise (facultatif)</label><input name="company"
+                                placeholder="Nom de l'entreprise"></div>
+                        <div class="field">
+                            <label>Fonction recherchée</label>
+                            <select name="role" id="role-select">
+                                <option value="">Tous les rôles du projet</option>
+                            </select>
+                            <small id="role-count" class="muted"></small>
+                        </div>
+
+                        <div class="field">
+                            <label>Ou saisir une fonction personnalisée</label>
+                            <input id="custom-role" type="text" placeholder="Ex. Directeur des partenariats">
+                        </div>
+                        <div class="field"><label>Mots-clés complémentaires (facultatif)</label><input name="keywords"
+                                placeholder="engagement, fondation, partenariats…"></div>
+                        <div class="field"><label>Nombre maximum de résultats</label><select name="limit">
+                                <option>5</option>
+                                <option selected>10</option>
+                                <option>15</option>
+                                <option>20</option>
+                            </select></div>
+                        <button class="btn primary" id="search-button" type="submit">⌕ Lancer la recherche</button>
+                    </form>
+                    <div class="notice">Les résultats proviennent d'un moteur de recherche public. Ils ne sont pas
+                        vérifiés en temps réel par LinkedIn. Vérifiez l'identité, le poste et l'entreprise avant toute
+                        prise de contact.</div>
+                    <div id="search-error"></div>
+                </section>
+                <section class="panel">
+                    <div class="results-head">
+                        <div>
+                            <h2>Résultats de recherche</h2>
+                            <p class="desc" style="margin:5px 0 0">Ajoutez les profils pertinents à votre liste de
+                                prospects.</p>
+                        </div><span class="count" id="result-count">0 résultat</span>
+                    </div>
+                    <div id="results" class="list">
+                        <div class="empty">Lancez une recherche pour afficher les profils trouvés.</div>
+                    </div>
+                </section>
+            </div>
+        </section>
+        <section id="prospects-view" class="hidden">
+            <div class="prospect-layout">
+                <section class="panel">
+                    <div class="results-head">
+                        <div>
+                            <h2>Vos prospects</h2>
+                            <p class="desc" style="margin:5px 0 0">Sélectionnez une fiche pour compléter ses
+                                informations et générer un message.</p>
+                        </div><span class="count" id="prospect-count">0 prospect</span>
+                    </div>
+                    <div class="toolbar"><input id="prospect-filter"
+                            placeholder="Filtrer par nom, entreprise, poste…"><button class="btn small"
+                            id="export-btn">Exporter CSV</button></div>
+                    <div id="prospect-list"></div>
+                </section>
+                <section class="panel">
+                    <h2>Fiche prospect & message personnalisé</h2>
+                    <p class="desc">Complétez les informations connues. Le message est adapté à ces données et reste
+                        entièrement modifiable.</p>
+                    <div id="editor">
+                        <div class="empty">Sélectionnez un prospect dans la liste ou ajoutez-en un depuis les résultats
+                            de recherche.</div>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </div>
+    <script>
+        (() => {
+            'use strict';
+            const KEY = 'prospectia_contacts_v2';
+            const ROLE_CATALOG = {
+                fund: [
+                    "directeur de la levée de fonds",
+                    "responsable levée de fonds",
+                    "responsable fundraising",
+                    "fundraiser",
+                    "directeur du développement",
+                    "responsable développement",
+                    "directeur des ressources",
+                    "responsable ressources financières",
+                    "responsable collecte de fonds",
+                    "responsable grands donateurs",
+                    "responsable philanthropie",
+                    "directeur de fondation",
+                    "directeur fondation",
+                    "responsable fondation",
+                    "chargé de mécénat",
+                    "responsable mécénat",
+                    "directeur mécénat",
+                    "responsable partenariats",
+                    "directeur partenariats",
+                    "responsable partenariats financiers",
+                    "responsable relations entreprises",
+                    "directeur relations entreprises",
+                    "responsable sponsoring",
+                    "responsable RSE",
+                    "directeur RSE",
+                    "responsable engagement sociétal",
+                    "responsable relations donateurs",
+                    "responsable développement philanthropique",
+                    "responsable financement",
+                    "directeur financement",
+                    "chargé de fundraising",
+                    "chargé de développement",
+                    "responsable communication et collecte",
+                    "directeur administratif et financier"
+                ],
+
+                corner: [
+                    "directeur des ressources humaines",
+                    "DRH",
+                    "responsable ressources humaines",
+                    "responsable RH",
+                    "directeur RH",
+                    "responsable qualité de vie au travail",
+                    "responsable QVT",
+                    "responsable bien-être au travail",
+                    "responsable expérience collaborateur",
+                    "directeur expérience collaborateur",
+                    "responsable communication interne",
+                    "directeur communication interne",
+                    "responsable services généraux",
+                    "directeur services généraux",
+                    "facility manager",
+                    "office manager",
+                    "responsable environnement de travail",
+                    "responsable événementiel",
+                    "directeur événementiel",
+                    "responsable animation interne",
+                    "responsable marque employeur",
+                    "directeur marque employeur",
+                    "responsable engagement collaborateurs",
+                    "chief happiness officer",
+                    "responsable achats indirects",
+                    "responsable développement RH",
+                    "responsable formation",
+                    "responsable avantages sociaux",
+                    "responsable politique sociale",
+                    "responsable prévention des risques psychosociaux",
+                    "responsable conditions de travail",
+                    "responsable relations sociales",
+                    "responsable communication RH",
+                    "responsable culture d'entreprise"
+                ],
+
+                custom: [
+                    "directeur général",
+                    "directeur",
+                    "directeur de développement",
+                    "directeur commercial",
+                    "responsable commercial",
+                    "directeur des partenariats",
+                    "responsable partenariats",
+                    "responsable communication",
+                    "directeur communication",
+                    "responsable marketing",
+                    "directeur marketing",
+                    "responsable innovation",
+                    "directeur innovation",
+                    "responsable projets",
+                    "directeur de projets",
+                    "chef de projet",
+                    "responsable développement commercial",
+                    "directeur développement commercial",
+                    "responsable relations institutionnelles",
+                    "directeur relations institutionnelles",
+                    "responsable stratégie",
+                    "directeur stratégie",
+                    "responsable développement",
+                    "directeur développement",
+                    "responsable affaires publiques",
+                    "directeur affaires publiques",
+                    "responsable mécénat",
+                    "responsable RSE",
+                    "responsable événementiel",
+                    "responsable expérience client",
+                    "responsable relations entreprises",
+                    "directeur administratif et financier",
+                    "secrétaire général",
+                    "président",
+                    "fondateur",
+                    "cofondateur"
+                ]
+            };
+            let prospects = JSON.parse(localStorage.getItem(KEY) || '[]'), results = [], activeId = null;
+            const $ = s => document.querySelector(s), safe = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            const save = () => { localStorage.setItem(KEY, JSON.stringify(prospects)); $('#nav-count').textContent = prospects.length };
+            const toast = t => { let n = document.createElement('div'); n.className = 'toast'; n.textContent = t; document.body.append(n); setTimeout(() => n.remove(), 3000) };
+            function updateRoleOptions() {
+
+                const project = $('#search-form').elements.project.value;
+
+                const roles = ROLE_CATALOG[project] || [];
+
+                const select = $('#role-select');
+
+                const previousValue = select.value;
+
+                select.innerHTML = '';
+
+                const allOption = document.createElement('option');
+                allOption.value = '';
+                allOption.textContent = 'Tous les rôles du projet';
+
+                select.appendChild(allOption);
+
+                roles.forEach(role => {
+
+                    const option = document.createElement('option');
+
+                    option.value = role;
+                    option.textContent = role;
+
+                    select.appendChild(option);
+                });
+
+                if (roles.includes(previousValue)) {
+                    select.value = previousValue;
+                }
+
+                $('#role-count').textContent =
+                    roles.length + ' intitulés disponibles pour ce projet';
+            }
+
+            $('#search-form').elements.project.addEventListener(
+                'change',
+                updateRoleOptions
+            );
+
+            $('#custom-role').addEventListener('input', function () {
+
+                if (this.value.trim()) {
+                    $('#role-select').value = '';
+                }
+
+            });
+
+            $('#role-select').addEventListener('change', function () {
+
+                if (this.value) {
+                    $('#custom-role').value = '';
+                }
+
+            });
+
+            updateRoleOptions();
+            function show(view) { $('#search-view').classList.toggle('hidden', view !== 'search'); $('#prospects-view').classList.toggle('hidden', view !== 'prospects'); document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.view === view)); if (view === 'prospects') renderProspects() }
+            document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => show(b.dataset.view));
+            function addResult(i) {
+                let r = results[i]; if (!r) return; let url = r.url || ''; if (prospects.some(p => p.linkedin === url)) { toast('Ce profil est déjà dans votre liste.'); return }
+                let p = { id: crypto.randomUUID(), name: r.title || '', company: '', role: '', location: '', linkedin: url, project: $('#search-form').elements.project.value, email: '', notes: 'Profil repéré via moteur de recherche — informations à vérifier.' };
+                prospects.unshift(p); save(); renderResults(); toast('Prospect ajouté à votre liste.')
+            }
+            function renderResults() { $('#result-count').textContent = results.length + ' résultat(s)'; $('#results').innerHTML = results.length ? results.map((r, i) => `<article class="person"><div class="person-main"><div class="person-title">${safe(r.title || 'Profil public')}</div><div class="person-sub">${safe(r.url)}</div><div class="person-actions"><button class="btn small" data-open="${i}">Ouvrir le profil</button><button class="btn small primary" data-add="${i}">＋ Ajouter à ma liste</button></div></div></article>`).join('') : '<div class="empty">Aucun profil trouvé. Essayez une fonction ou une localisation plus large.</div>' }
+            $('#results').addEventListener('click', e => { let o = e.target.closest('[data-open]'), a = e.target.closest('[data-add]'); if (o) window.open(results[+o.dataset.open].url, '_blank', 'noopener'); if (a) addResult(+a.dataset.add) });
+            $('#geo-scope').onchange = e => { $('#department-field').classList.toggle('hidden', e.target.value !== 'department'); $('#custom-location-field').classList.toggle('hidden', e.target.value !== 'custom') };
+            $('#search-form').onsubmit = async e => {
+                e.preventDefault(); let f = e.currentTarget;
+
+                let payload = Object.fromEntries(new FormData(f));
+
+                const customRole = $('#custom-role').value.trim();
+
+                if (customRole) {
+                    payload.role = customRole;
+                } else {
+                    payload.role = $('#role-select').value;
+                }
+
+                payload.limit = Number(payload.limit); $('#search-button').disabled = true; $('#search-button').textContent = 'Recherche en cours…'; $('#search-error').innerHTML = ''; $('#results').innerHTML = '<div class="empty">Recherche des profils publics…</div>';
+                try {
+                    let res = await fetch('/api/linkedin-discovery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); let data = await res.json(); if (!res.ok) throw Error(data.error || 'Recherche indisponible');
+                    results = Array.isArray(data.results) ? data.results : [];
+
+                    renderResults();
+
+                    $('#result-count').textContent =
+                        data.count + ' résultat(s) — ' +
+                        data.queries_used + ' recherche(s) Tavily';
+                } catch (err) { $('#results').innerHTML = '<div class="empty">La recherche n’a pas abouti.</div>'; $('#search-error').innerHTML = `<div class="notice error">${safe(err.message)}<br>Vérifiez que le serveur Python est lancé et que DDGS est installé.</div>` } finally { $('#search-button').disabled = false; $('#search-button').textContent = '⌕ Lancer la recherche' }
+            };
+            function renderProspects() { let q = $('#prospect-filter').value.toLowerCase(); let list = prospects.filter(p => [p.name, p.company, p.role, p.location].join(' ').toLowerCase().includes(q)); $('#prospect-count').textContent = prospects.length + ' prospect(s)'; $('#prospect-list').innerHTML = list.length ? list.map(p => `<div class="prospect ${p.id === activeId ? 'active' : ''}" data-select="${p.id}"><b>${safe(p.name || 'Nom à compléter')}</b><small>${safe(p.role || 'Fonction à compléter')} · ${safe(p.company || 'Entreprise à confirmer')}</small></div>`).join('') : '<div class="empty">Aucun prospect. Faites une recherche puis ajoutez les profils pertinents.</div>'; $('#prospect-list').querySelectorAll('[data-select]').forEach(el => el.onclick = () => { activeId = el.dataset.select; renderProspects(); renderEditor() }) }
+            $('#prospect-filter').oninput = renderProspects;
+            function getMessage(p) { let first = (p.name || '').split(/[|–—-]/)[0].trim().split(' ')[0]; if (!first || first.length > 30) first = 'Bonjour'; let company = p.company || 'votre organisation', role = p.role || 'votre fonction'; let project = p.project === 'corner' ? 'un projet de corner solidaire au sein des entreprises' : p.project === 'custom' ? 'notre projet' : 'un projet associatif'; let hook = p.notes ? ` J’ai également relevé les éléments suivants : ${p.notes.slice(0, 180)}.` : ''; return `Bonjour ${first},\n\nJe me permets de vous contacter car votre fonction de ${role} chez ${company} semble en lien avec les sujets que nous souhaitons développer.\n\nNous portons ${project} et cherchons à échanger avec des organisations susceptibles de partager cette démarche.${hook}\n\nSeriez-vous disponible pour un court échange afin de vous présenter l’initiative et voir si elle pourrait faire écho à vos priorités ?\n\nBien cordialement,\n[Votre prénom et nom]\n[Nom de votre structure]` }
+            function renderEditor() {
+                let p = prospects.find(x => x.id === activeId); if (!p) { $('#editor').innerHTML = '<div class="empty">Sélectionnez un prospect dans la liste.</div>'; return }
+                $('#editor').innerHTML = `<form id="prospect-form"><div class="field"><label>Nom / intitulé du profil</label><input name="name" value="${safe(p.name)}" placeholder="Prénom Nom"></div><div class="field"><label>Entreprise</label><input name="company" value="${safe(p.company)}" placeholder="Entreprise actuelle"></div><div class="row"><div class="field"><label>Fonction</label><input name="role" value="${safe(p.role)}" placeholder="Responsable RSE…"></div><div class="field"><label>Localisation</label><input name="location" value="${safe(p.location)}" placeholder="Paris"></div></div><div class="field"><label>Email (facultatif)</label><input name="email" type="email" value="${safe(p.email)}" placeholder="prenom@entreprise.fr"></div><div class="field"><label>Projet</label><select name="project"><option value="fund" ${p.project === 'fund' ? 'selected' : ''}>Levée de fonds</option><option value="corner" ${p.project === 'corner' ? 'selected' : ''}>Corner en entreprise</option><option value="custom" ${p.project === 'custom' ? 'selected' : ''}>Autre projet</option></select></div><div class="field"><label>Informations utiles pour personnaliser le message</label><textarea name="notes" placeholder="Ex. engagement RSE, actualité de l'entreprise, intérêt commun…">${safe(p.notes)}</textarea></div><div class="field"><label>Lien LinkedIn</label><input name="linkedin" value="${safe(p.linkedin)}"></div><div class="row"><button class="btn primary" type="submit">Enregistrer la fiche</button><button class="btn" type="button" id="open-profile">Ouvrir LinkedIn</button><button class="btn" type="button" id="delete-prospect">Supprimer</button></div></form><hr style="border:0;border-top:1px solid var(--line);margin:20px 0"><h2 style="font-size:14px">Message LinkedIn proposé</h2><p class="desc">Généré à partir des informations de cette fiche. Vérifiez les éléments avant de l'utiliser.</p><div class="message-box"><textarea id="generated-message">${safe(getMessage(p))}</textarea></div><div class="message-actions"><button class="btn primary" id="regenerate">Régénérer le message</button><button class="btn" id="copy-message">Copier le message</button><button class="btn" id="open-linkedin">Ouvrir le profil</button></div><p class="muted" style="margin-top:12px">Aucun message n'est envoyé automatiquement. Le contenu est une proposition à relire et adapter.</p>`;
+                $('#prospect-form').onsubmit = e => { e.preventDefault(); let data = Object.fromEntries(new FormData(e.currentTarget)); Object.assign(p, data); save(); renderProspects(); renderEditor(); toast('Fiche prospect enregistrée.') };
+                $('#regenerate').onclick = () => { $('#generated-message').value = getMessage(p); toast('Message régénéré à partir de la fiche.') };
+                $('#copy-message').onclick = async () => { try { await navigator.clipboard.writeText($('#generated-message').value); toast('Message copié.') } catch { toast('Copie indisponible dans ce navigateur.') } };
+                const open = () => { if (p.linkedin) window.open(p.linkedin, '_blank', 'noopener'); else toast('Aucun lien LinkedIn renseigné.') };
+                $('#open-profile').onclick = open; $('#open-linkedin').onclick = open;
+                $('#delete-prospect').onclick = () => { if (confirm('Supprimer ce prospect ?')) { prospects = prospects.filter(x => x.id !== p.id); activeId = null; save(); renderProspects(); renderEditor() } };
+            }
+            $('#export-btn').onclick = () => { let cols = ['name', 'company', 'role', 'location', 'email', 'project', 'linkedin', 'notes']; let csv = [cols.join(';'), ...prospects.map(p => cols.map(k => '"' + String(p[k] || '').replaceAll('"', '""') + '"').join(';'))].join('\r\n'); let a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' })); a.download = 'prospectia_prospects.csv'; a.click(); URL.revokeObjectURL(a.href) };
+            save(); renderProspects();
+        })();
+    </script>
+</body>
+
+</html>
