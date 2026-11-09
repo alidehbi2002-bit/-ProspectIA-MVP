@@ -1248,7 +1248,8 @@ function renderSearchSummary(data) {
 
     $('#summary-rejected').textContent =
         Number(data.rejected_geographic || 0) +
-        Number(data.rejected_relevance || 0);
+        Number(data.rejected_relevance || 0) +
+        Number(data.rejected_visited || 0);
 
     $('#summary-queries').textContent =
         Number(data.queries_used || 0);
@@ -1264,10 +1265,14 @@ function renderSearchSummary(data) {
     $('#search-geo-info').innerHTML = strict
         ? '<strong>Filtrage géographique :</strong> ' +
           safe(name + code) +
-          '<br>Les profils affichés ont une correspondance géographique détectée dans les informations retournées par Tavily.'
+          '<br>Les profils affichés ont une correspondance géographique détectée dans les informations retournées par Tavily.' +
+          '<br><strong>Score minimum :</strong> ' + safe(data.minimum_match_score || 82) + '/100.' +
+          '<br>Les profils déjà visités sont automatiquement exclus.'
         : '<strong>Zone recherchée :</strong> ' +
           safe(name + code) +
-          '<br>Le filtrage strict par département n’est pas activé pour cette recherche.';
+          '<br>Le filtrage strict par département n’est pas activé pour cette recherche.' +
+          '<br><strong>Score minimum :</strong> ' + safe(data.minimum_match_score || 82) + '/100.' +
+          '<br>Les profils déjà visités sont automatiquement exclus.';
 
 }
 
@@ -1499,6 +1504,14 @@ function openLinkedInProfile(url, title = '') {
      */
     markVisited(url, title);
 
+    // Synchronise aussi la visite avec la base SQLite du serveur.
+    // L'historique local reste utilisé comme solution immédiate côté navigateur.
+    fetch('/api/profile-visited', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'visit', url:url, title:title || ''})
+    }).catch(() => {});
+
     const prospect = prospects.find(
         item => normalizeLinkedInUrl(item.linkedin) === normalizeLinkedInUrl(url)
     );
@@ -1583,6 +1596,13 @@ $('#search-form').onsubmit = async event => {
     payload.geo_scope = String(payload.geo_scope || 'yvelines').trim();
     payload.department = String(payload.department || '78').trim();
 
+    // Synchronise l'historique local des visites avec le serveur.
+    // Le serveur peut ainsi écarter ces profils et poursuivre la recherche.
+    payload.visited_urls = Object.keys(visitedProfiles)
+        .slice(-2000)
+        .map(url => normalizeLinkedInUrl(url))
+        .filter(Boolean);
+
     const geo = getGeoDescription();
 
     if (payload.geo_scope === 'department' && !payload.department) {
@@ -1639,9 +1659,17 @@ $('#search-form').onsubmit = async event => {
         }
 
         results = Array.isArray(data.results)
-            ? data.results
+            ? data.results.filter(result =>
+                result &&
+                result.url &&
+                !isVisited(result.url) &&
+                result.visited !== true &&
+                Number(result.match_score || 0) >= Number(data.minimum_match_score || 82)
+            )
             : [];
 
+        // Le nombre affiché correspond aux résultats réellement présentés.
+        data.count = results.length;
         lastSearch = data;
 
         if (
@@ -1665,22 +1693,22 @@ $('#search-form').onsubmit = async event => {
             (data.count || 0) +
             ' résultat(s) classé(s) par pertinence — ' +
             (data.queries_used || 0) +
-            ' recherche(s) Tavily';
-
-        const visitedInResults = results.filter(
-            result => isVisited(result.url)
-        ).length;
+            ' recherche(s) Tavily · score minimum ' +
+            (data.minimum_match_score || 82) + '/100';
 
         if (data.count > 0) {
 
             toast(
-                data.count + ' profil(s) retenu(s), dont ' +
-                visitedInResults + ' déjà visité(s).'
+                data.count + ' nouveau(x) profil(s) pertinent(s) trouvé(s). ' +
+                'Les profils déjà visités ont été écartés.'
             );
 
         } else {
 
-            toast('Aucun profil géographiquement correspondant.');
+            toast(
+                'Aucun nouveau profil ne dépasse le score minimum de ' +
+                (data.minimum_match_score || 82) + '/100.'
+            );
 
         }
 

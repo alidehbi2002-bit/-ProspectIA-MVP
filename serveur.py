@@ -908,57 +908,103 @@ def build_queries(params):
 
 
 def score_profile(item, params):
-    """Score de pertinence basé sur les champs réellement renseignés."""
-    text = profile_text(item)
-    normalized = normalize_text(text)
-    score = 0
-    evidence = []
-
+    """
+    Score sur 100, calculé uniquement à partir des critères renseignés.
+    Les correspondances exactes dans le titre pèsent davantage que celles
+    repérées dans le contenu descriptif.
+    """
+    title = normalize_text(item.get("title", ""))
+    text = normalize_text(profile_text(item))
     role = str(params.get("role", "")).strip()
     company = str(params.get("company", "")).strip()
     keywords = str(params.get("keywords", "")).strip()
 
+    weighted_score = 0.0
+    total_weight = 0.0
+    evidence = []
+
+    def add_criterion(weight, value, label):
+        nonlocal weighted_score, total_weight
+        total_weight += weight
+        weighted_score += weight * max(0.0, min(1.0, value))
+        if value >= 0.72:
+            evidence.append(label)
+
     if role:
-        if role_matches_text(text, role):
-            score += 30
-            evidence.append("fonction")
+        wanted = normalize_text(role)
+        role_value = 0.0
+        if wanted and wanted in title:
+            role_value = 1.0
+        elif wanted and wanted in text:
+            role_value = 0.90
         else:
-            return 0, evidence
-    else:
-        score += 10
+            tokens = [
+                token for token in wanted.split()
+                if len(token) > 2 and token not in {
+                    "de", "du", "des", "la", "le", "les",
+                    "et", "en", "au", "aux", "pour"
+                }
+            ]
+            if tokens:
+                hits = sum(1 for token in tokens if token in text.split())
+                role_value = hits / len(tokens)
+        add_criterion(35, role_value, "fonction")
 
     if company:
-        if contains_location(text, company):
-            score += 30
-            evidence.append("entreprise")
-        else:
-            return 0, evidence
-    else:
-        score += 5
+        wanted_company = normalize_text(company)
+        company_value = 1.0 if wanted_company and wanted_company in title else (
+            0.95 if wanted_company and wanted_company in text else 0.0
+        )
+        # Les noms composés peuvent apparaître sous une forme légèrement abrégée.
+        if company_value == 0 and wanted_company:
+            tokens = [t for t in wanted_company.split() if len(t) > 2]
+            if tokens:
+                hits = sum(1 for token in tokens if token in text.split())
+                company_value = min(0.75, hits / len(tokens))
+        add_criterion(25, company_value, "entreprise")
 
     if keywords:
         keyword_parts = [
             part.strip() for part in re.split(r"[,;|]+", keywords)
             if part.strip()
         ]
-        keyword_hits = [
-            part for part in keyword_parts
-            if contains_location(text, part)
-        ]
-        if not keyword_hits:
-            return 0, evidence
-        score += min(15, 5 + 5 * len(keyword_hits))
-        evidence.append("mots-clés")
+        keyword_values = []
+        for part in keyword_parts:
+            normalized_part = normalize_text(part)
+            if not normalized_part:
+                continue
+            if normalized_part in title:
+                keyword_values.append(1.0)
+            elif normalized_part in text:
+                keyword_values.append(0.9)
+            else:
+                tokens = [t for t in normalized_part.split() if len(t) > 2]
+                if tokens:
+                    hits = sum(1 for token in tokens if token in text.split())
+                    keyword_values.append(hits / len(tokens))
+                else:
+                    keyword_values.append(0.0)
+        keyword_value = (
+            sum(keyword_values) / len(keyword_values)
+            if keyword_values else 0.0
+        )
+        add_criterion(20, keyword_value, "mots-clés")
 
     scope = str(params.get("geo_scope", "")).strip().lower()
     code, department = department_configuration(params)
-    if department and profile_matches_department(item, code):
-        score += 25
-        evidence.append("localisation")
-    elif scope in ("custom", "idf") and profile_matches_location(item, params):
-        score += 25
-        evidence.append("localisation")
+    geo_ok = True
+    if department:
+        geo_ok = profile_matches_department(item, code)
+    elif scope in ("custom", "idf"):
+        geo_ok = profile_matches_location(item, params)
 
+    if scope in ("department", "yvelines", "idf", "custom"):
+        add_criterion(20, 1.0 if geo_ok else 0.0, "localisation")
+
+    if total_weight <= 0:
+        return 0, evidence
+
+    score = round((weighted_score / total_weight) * 100)
     return score, evidence
 
 
@@ -1186,7 +1232,6 @@ def search_linkedin_index(params):
     except (ValueError, TypeError):
         limit = 10
 
-    # Nettoyage des paramètres pour éviter les requêtes vides ou incohérentes.
     params = dict(params or {})
     for field in ("role", "company", "keywords", "location"):
         params[field] = str(params.get(field, "") or "").strip()
@@ -1199,48 +1244,55 @@ def search_linkedin_index(params):
         if code not in DEPARTMENTS:
             raise ValueError("Département invalide.")
 
+    # Les profils ouverts dans le navigateur sont envoyés au serveur :
+    # ils sont exclus avant de constituer la liste des résultats.
+    visited_urls = set()
+    raw_visited = params.get("visited_urls", [])
+    if isinstance(raw_visited, list):
+        for value in raw_visited[:2000]:
+            normalized_url = normalize_linkedin_profile(value)
+            if normalized_url:
+                visited_urls.add(normalized_url)
+    params["visited_urls"] = sorted(visited_urls)
+
+    MIN_MATCH_SCORE = 82
     key = cache_key(params, limit)
-    now = time.monotonic()
 
-    with _CACHE_LOCK:
-        cached = _SEARCH_CACHE.get(key)
-        if cached and now - cached[0] < CACHE_TTL_SECONDS:
-            result = json.loads(json.dumps(cached[1]))
-            result["cached"] = True
-            return refresh_result_statuses(result)
-        if cached:
-            _SEARCH_CACHE.pop(key, None)
-
+    # On ne réutilise pas le cache pour ne pas renvoyer un ancien lot
+    # contenant des profils déjà visités ou ne plus chercher de nouveaux profils.
     with _SEARCH_LOCK:
-        with _CACHE_LOCK:
-            cached = _SEARCH_CACHE.get(key)
-            if cached and time.monotonic() - cached[0] < CACHE_TTL_SECONDS:
-                result = json.loads(json.dumps(cached[1]))
-                result["cached"] = True
-                return refresh_result_statuses(result)
-
         queries = build_queries(params)
         started = time.monotonic()
         candidates = {}
+        seen_urls = set()
         calls_made = 0
         rejected_geo = 0
         rejected_relevance = 0
-
+        rejected_visited = 0
         department_code, department = department_configuration(params)
         scope = str(params.get("geo_scope", "")).strip().lower()
 
-        # On examine plusieurs requêtes avant de limiter les résultats :
-        # cela permet de classer les profils plutôt que de retenir les premiers.
+        # On collecte un vivier plus large que le nombre demandé afin de
+        # classer les meilleurs scores, sans laisser les profils visités
+        # consommer la place des nouveaux profils.
+        target_candidates = min(
+            MAX_RESULTS * 3,
+            max(limit * 3, limit + 10)
+        )
+
+        # Tant que le vivier de profils nouveaux et pertinents n'est pas
+        # suffisant, on poursuit les variantes géographiques de la recherche.
         for query_index, query in enumerate(queries):
-            if calls_made >= 12:
+            if calls_made >= 18:
                 break
 
             logging.info(
-                "Recherche Tavily %s/%s | zone=%s | fonction=%s | entreprise=%s",
+                "Recherche Tavily %s/%s | zone=%s | fonction=%s | entreprise=%s | score_min=%s",
                 query_index + 1, len(queries),
                 department_code or params.get("location") or scope,
-                params.get("role") or "rôles du projet",
-                params.get("company") or "non précisée"
+                params.get("role") or "non précisée",
+                params.get("company") or "non précisée",
+                MIN_MATCH_SCORE
             )
 
             data = tavily_search(query, MAX_RESULTS)
@@ -1254,11 +1306,21 @@ def search_linkedin_index(params):
                     continue
 
                 url = normalize_linkedin_profile(item.get("url"))
-                if not url or url in candidates:
+                if not url or url in seen_urls:
+                    continue
+                seen_urls.add(url)
+
+                # Exclusion immédiate des profils visités côté navigateur.
+                if url in visited_urls:
+                    rejected_visited += 1
                     continue
 
-                # La géographie est un critère bloquant : un profil sans
-                # preuve de localisation n'est jamais présenté comme localisé.
+                # Exclusion des profils visités/contactés déjà connus en base.
+                profile_status = get_profile_status(url)
+                if profile_status.get("visited") or profile_status.get("status") == "contacted":
+                    rejected_visited += 1
+                    continue
+
                 if department_code:
                     geo_ok = profile_matches_department(item, department_code)
                 elif scope in ("custom", "idf"):
@@ -1271,7 +1333,7 @@ def search_linkedin_index(params):
                     continue
 
                 score, matched_fields = score_profile(item, params)
-                if score <= 0:
+                if score < MIN_MATCH_SCORE:
                     rejected_relevance += 1
                     continue
 
@@ -1291,16 +1353,15 @@ def search_linkedin_index(params):
                     "location_evidence": "Localisation repérée dans le contenu du résultat" if geo_ok else None,
                     "match_score": score,
                     "matched_fields": matched_fields,
-                    "visited": profile_status["visited"],
+                    "visited": False,
                     "status": profile_status["status"],
                     "first_seen": profile_status["first_seen"],
                     "visited_at": profile_status["visited_at"],
                     "contacted_at": profile_status["contacted_at"]
                 }
 
-            # Après au moins deux recherches ciblées, si le vivier est suffisant,
-            # on évite les appels inutiles.
-            if calls_made >= 2 and len(candidates) >= limit * 2:
+            # Le seuil porte uniquement sur les profils neufs et pertinents.
+            if len(candidates) >= target_candidates:
                 break
 
         ranked = sorted(
@@ -1317,6 +1378,7 @@ def search_linkedin_index(params):
             "results": found,
             "count": len(found),
             "verified": False,
+            "minimum_match_score": MIN_MATCH_SCORE,
             "geographic_filter": "strict" if department_code else "requested",
             "department": department["name"] if department else (
                 params.get("location") if scope == "custom" else
@@ -1325,25 +1387,22 @@ def search_linkedin_index(params):
             "department_code": department_code,
             "rejected_geographic": rejected_geo,
             "rejected_relevance": rejected_relevance,
+            "rejected_visited": rejected_visited,
             "status": "ok" if found else "no_results",
             "cached": False,
             "elapsed_ms": round((time.monotonic() - started) * 1000),
             "queries_used": calls_made,
             "search_backends": ["tavily"],
             "message": (
-                f"{len(found)} profil(s) retenu(s), classé(s) selon les critères saisis."
+                f"{len(found)} nouveau(x) profil(s) retenu(s) avec un score minimum de "
+                f"{MIN_MATCH_SCORE}/100. {rejected_visited} profil(s) déjà visité(s) ignoré(s)."
                 if found else
-                "Aucun profil ne correspond suffisamment aux critères renseignés. "
-                "Vérifiez l'orthographe ou élargissez un seul critère à la fois."
+                f"Aucun nouveau profil n'atteint le seuil de {MIN_MATCH_SCORE}/100. "
+                f"{rejected_visited} profil(s) déjà visité(s), {rejected_relevance} résultat(s) "
+                "insuffisamment pertinents et "
+                f"{rejected_geo} résultat(s) hors zone ont été écartés."
             )
         }
-
-        with _CACHE_LOCK:
-            if len(_SEARCH_CACHE) >= 100:
-                oldest = min(_SEARCH_CACHE, key=lambda item: _SEARCH_CACHE[item][0])
-                _SEARCH_CACHE.pop(oldest, None)
-            _SEARCH_CACHE[key] = (time.monotonic(), result)
-
         return result
 
 
@@ -1408,7 +1467,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.headers.get("Content-Length", "0")
         )
 
-        if not 0 < length <= 8192:
+        if not 0 < length <= 262144:
 
             raise ValueError(
                 "Paramètres de requête invalides."
