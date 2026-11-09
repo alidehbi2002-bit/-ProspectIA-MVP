@@ -523,8 +523,9 @@ button {cursor:pointer}
 <h2>Rechercher des profils LinkedIn</h2>
 
 <p class="desc">
-Recherchez des profils publics indexés sur le web selon la fonction,
-l'entreprise et la localisation géographique.
+Les critères que vous renseignez sont prioritaires : zone géographique,
+fonction, entreprise et mots-clés. Les profils sont contrôlés puis classés
+selon leur correspondance avec votre demande.
 </p>
 
 <form id="search-form">
@@ -568,8 +569,9 @@ l'entreprise et la localisation géographique.
 </div>
 
 <div id="geo-mode-info" class="notice">
-Le filtrage géographique strict est activé pour les recherches départementales.
-Les profils sans localisation identifiable seront écartés.
+La zone sélectionnée est un critère obligatoire. Les profils sans preuve
+de localisation dans cette zone seront écartés. Les critères saisis
+(fonction, entreprise, mots-clés) servent ensuite à filtrer et classer les profils.
 </div>
 
 <div class="field">
@@ -636,7 +638,7 @@ actuelle de la personne.
 <div>
 <h2>Résultats de recherche</h2>
 <p class="desc" style="margin:5px 0 0">
-Profils retenus après filtrage géographique.
+Profils classés selon leur correspondance avec les critères renseignés.
 </p>
 </div>
 <span class="count" id="result-count">0 résultat</span>
@@ -655,7 +657,7 @@ Profils retenus après filtrage géographique.
 
     <div class="summary-card">
         <strong id="summary-rejected">0</strong>
-        <span>Profils rejetés géographiquement</span>
+        <span>Profils écartés (zone ou critères)</span>
     </div>
 
     <div class="summary-card">
@@ -1245,7 +1247,8 @@ function renderSearchSummary(data) {
         Number(data.count || 0);
 
     $('#summary-rejected').textContent =
-        Number(data.rejected_geographic || 0);
+        Number(data.rejected_geographic || 0) +
+        Number(data.rejected_relevance || 0);
 
     $('#summary-queries').textContent =
         Number(data.queries_used || 0);
@@ -1332,8 +1335,17 @@ function renderResults() {
                 <div class="geo-result ${isGeoVerified ? 'accepted' : 'unknown'}">
 
                     ${isGeoVerified
-                        ? 'Une correspondance avec le département sélectionné a été détectée dans les informations retournées par Tavily. Cela ne garantit pas la localisation actuelle de la personne.'
-                        : 'La localisation du profil n’a pas été confirmée par un filtrage départemental strict.'}
+                        ? 'Une indication de localisation correspondant à la zone demandée a été détectée dans le contenu indexé. Cela ne garantit pas la localisation actuelle de la personne.'
+                        : 'La localisation du profil n’a pas pu être confirmée.'}
+
+                    ${Array.isArray(result.matched_fields) && result.matched_fields.length
+                        ? '<br><strong>Critères retrouvés :</strong> ' +
+                          safe(result.matched_fields.join(' · '))
+                        : ''}
+
+                    ${Number.isFinite(Number(result.match_score))
+                        ? '<br><strong>Pertinence :</strong> ' + safe(result.match_score) + '/100'
+                        : ''}
 
                 </div>
 
@@ -1563,6 +1575,14 @@ $('#search-form').onsubmit = async event => {
 
     payload.limit = Number(payload.limit);
 
+    // Envoi explicite des champs réellement utilisés pour la recherche.
+    payload.role = String(payload.role || '').trim();
+    payload.company = String(payload.company || '').trim();
+    payload.keywords = String(payload.keywords || '').trim();
+    payload.location = String(payload.location || '').trim();
+    payload.geo_scope = String(payload.geo_scope || 'yvelines').trim();
+    payload.department = String(payload.department || '78').trim();
+
     const geo = getGeoDescription();
 
     if (payload.geo_scope === 'department' && !payload.department) {
@@ -1643,7 +1663,7 @@ $('#search-form').onsubmit = async event => {
 
         $('#result-count').textContent =
             (data.count || 0) +
-            ' résultat(s) — ' +
+            ' résultat(s) classé(s) par pertinence — ' +
             (data.queries_used || 0) +
             ' recherche(s) Tavily';
 

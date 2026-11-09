@@ -722,248 +722,244 @@ def department_configuration(params):
     return None, None
 
 
+
 def geographic_terms(params):
-
+    """Retourne les termes géographiques réellement demandés."""
     code, department = department_configuration(params)
-
     if department:
+        return [department["name"], *department["aliases"]]
 
-        return [
-            department["name"],
-            code,
-            *department["aliases"][:8]
-        ]
-
-    scope = str(
-        params.get("geo_scope", "")
-    ).strip().lower()
-
+    scope = str(params.get("geo_scope", "")).strip().lower()
     if scope == "idf":
+        return ["Île-de-France", "Paris", "Yvelines", "Hauts-de-Seine",
+                "Seine-Saint-Denis", "Val-de-Marne", "Essonne",
+                "Seine-et-Marne", "Val-d'Oise"]
 
-        return [
-            "Île-de-France",
-            "Paris",
-            "Yvelines",
-            "Hauts-de-Seine"
-        ]
+    location = str(params.get("location", "")).strip()[:100]
+    return [location] if location else []
 
-    location = str(
-        params.get("location", "")
-    ).strip()[:100]
 
-    if location:
-        return [location]
+def profile_text(item):
+    """Texte exploitable retourné par le moteur de recherche."""
+    return " ".join(
+        str(item.get(key) or "")
+        for key in ("title", "content", "raw_content")
+    )
 
-    return ["Yvelines", "Versailles"]
+
+def contains_location(text, location):
+    normalized_text = normalize_text(text)
+    normalized_location = normalize_text(location)
+    if not normalized_text or not normalized_location:
+        return False
+    pattern = r"(?<![a-z0-9])" + re.escape(normalized_location) + r"(?![a-z0-9])"
+    return bool(re.search(pattern, normalized_text))
 
 
 def profile_matches_department(item, department_code):
-
-    department = DEPARTMENTS.get(department_code)
-
+    """N'accepte que les résultats contenant une preuve textuelle du département."""
+    department = DEPARTMENTS.get(str(department_code))
     if not department:
         return False
 
-    text = " ".join([
-
-        str(item.get("title") or ""),
-
-        str(item.get("content") or ""),
-
-        str(item.get("raw_content") or "")
-
-    ])
-
-    normalized = normalize_text(text)
-
-    if not normalized:
+    text = profile_text(item)
+    if not normalize_text(text):
         return False
 
-    # Codes postaux.
-    postal_pattern = (
-        r"(?<!\d)(?:" +
-        "|".join(department["postal"]) +
-        r")\d{3}(?!\d)"
-    )
-
+    # Code postal complet du département (ex. 78000), pas le nombre 78 isolé.
+    postal_pattern = r"(?<!\d)(?:" + "|".join(
+        re.escape(code) for code in department["postal"]
+    ) + r")\d{3}(?!\d)"
     if re.search(postal_pattern, text):
         return True
 
-    # Numéro de département explicitement indiqué.
-    normalized_code = re.escape(department_code)
-
+    normalized = normalize_text(text)
     code_pattern = (
         r"\b(?:departement|dept|dpt)\s*" +
-        normalized_code +
-        r"\b"
+        re.escape(str(department_code)) + r"\b"
     )
-
     if re.search(code_pattern, normalized):
         return True
 
-    # Nom du département.
-    department_name = normalize_text(
-        department["name"]
-    )
-
-    if department_name:
-
-        pattern = (
-            r"(?<![a-z0-9])" +
-            re.escape(department_name) +
-            r"(?![a-z0-9])"
-        )
-
-        if re.search(pattern, normalized):
-            return True
-
-    # Villes du département.
-    for city in department["aliases"]:
-
-        city_normalized = normalize_text(city)
-
-        if not city_normalized:
-            continue
-
-        pattern = (
-            r"(?<![a-z0-9])" +
-            re.escape(city_normalized) +
-            r"(?![a-z0-9])"
-        )
-
-        if re.search(pattern, normalized):
-            return True
-
-    return False
+    return any(contains_location(text, term)
+               for term in [department["name"], *department["aliases"]])
 
 
-# ============================================================
-# CONSTRUCTION DES GROUPES DE RECHERCHE
-# ============================================================
+def profile_matches_location(item, params):
+    """Contrôle une localisation libre ou l'Île-de-France."""
+    scope = str(params.get("geo_scope", "")).strip().lower()
+    text = profile_text(item)
+
+    if scope == "idf":
+        return any(contains_location(text, term) for term in geographic_terms(params))
+
+    location = str(params.get("location", "")).strip()
+    return contains_location(text, location) if location else True
+
+
+def role_matches_text(text, role):
+    """Tolère les variantes d'intitulé tout en exigeant une vraie proximité."""
+    wanted = normalize_text(role)
+    haystack = normalize_text(text)
+    if not wanted or not haystack:
+        return False
+    if wanted in haystack:
+        return True
+
+    stop_words = {"de", "du", "des", "la", "le", "les", "et", "en", "au", "aux"}
+    tokens = [t for t in wanted.split() if len(t) > 2 and t not in stop_words]
+    if not tokens:
+        return False
+    matched = sum(1 for token in tokens if token in haystack.split())
+    return matched >= max(1, round(len(tokens) * 0.7))
+
 
 def quoted_or(values):
-
     cleaned = []
-
     for value in values:
-
         value = str(value).strip()[:100]
-
         if value and value not in cleaned:
             cleaned.append(value)
-
     if not cleaned:
         return ""
-
     if len(cleaned) == 1:
         return f'"{cleaned[0]}"'
+    return "(" + " OR ".join(f'"{value}"' for value in cleaned[:4]) + ")"
 
-    return "(" + " OR ".join(
-        f'"{value}"' for value in cleaned[:4]
-    ) + ")"
-
-
-# ============================================================
-# CONSTRUCTION DES REQUÊTES TAVILY
-# ============================================================
 
 def build_queries(params):
-
-    project = str(
-        params.get("project", "fund")
-    ).strip()
-
+    """
+    Construit les requêtes dans l'ordre de priorité :
+    critères explicitement saisis d'abord, élargissement ensuite.
+    """
+    project = str(params.get("project", "fund")).strip()
     if project not in ROLES:
         project = "fund"
 
-    role = str(
-        params.get("role", "")
-    ).strip()[:100]
-
-    roles = [role] if role else ROLES[project]
+    role = str(params.get("role", "")).strip()[:100]
+    company = str(params.get("company", "")).strip()[:100]
+    keywords = str(params.get("keywords", "")).strip()[:120]
+    scope = str(params.get("geo_scope", "yvelines")).strip().lower()
 
     code, department = department_configuration(params)
+    if department:
+        geo_values = [department["name"], *department["aliases"][:12]]
+        primary_geo = department["name"]
+    elif scope == "idf":
+        geo_values = geographic_terms(params)
+        primary_geo = "Île-de-France"
+    else:
+        geo_values = geographic_terms(params)
+        primary_geo = geo_values[0] if geo_values else ""
 
-    company = str(
-        params.get("company", "")
-    ).strip()[:100]
-
-    keywords = str(
-        params.get("keywords", "")
-    ).strip()[:120]
+    # La localisation principale et tous les critères saisis sont placés
+    # dans la première requête, sans être noyés dans un catalogue de rôles.
+    explicit_roles = [role] if role else ROLES[project][:8]
+    role_groups = [explicit_roles[i:i + 3] for i in range(0, len(explicit_roles), 3)]
 
     queries = []
 
-    if department:
+    def add_query(role_values, geo_values_for_query, include_all=True):
+        parts = ["site:linkedin.com/in/"]
+        role_clause = quoted_or(role_values)
+        geo_clause = quoted_or(geo_values_for_query[:4])
+        if role_clause:
+            parts.append(role_clause)
+        if geo_clause:
+            parts.append(geo_clause)
+        parts.append('"France"')
+        if company:
+            parts.append(f'"{company}"')
+        if keywords:
+            # Les mots-clés restent explicites dans chaque requête prioritaire.
+            parts.append(keywords)
+        query = " ".join(part for part in parts if part)
+        query = " ".join(query.split())[:390]
+        if query and query not in queries:
+            queries.append(query)
 
-        aliases = department["aliases"]
-
-        geo_groups = [
-
-            [
-                department["name"],
-                aliases[0],
-                aliases[1],
-                code
-            ],
-
-            aliases[2:7],
-
-            aliases[7:12],
-
-            aliases[12:17],
-
-            aliases[17:22]
-        ]
-
+    if primary_geo:
+        add_query(explicit_roles[:3], [primary_geo])
+    elif geo_values:
+        add_query(explicit_roles[:3], geo_values[:4])
     else:
+        add_query(explicit_roles[:3], [])
 
-        geo_groups = [
-            geographic_terms(params)[:4]
+    # Si l'utilisateur a fourni des critères, élargir progressivement sans
+    # abandonner les critères obligatoires.
+    if department:
+        for city in geo_values[1:]:
+            add_query(explicit_roles[:3], [city])
+    elif scope == "idf":
+        for geo in geo_values[1:]:
+            add_query(explicit_roles[:3], [geo])
+    elif geo_values:
+        for geo in geo_values[1:4]:
+            add_query(explicit_roles[:3], [geo])
+
+    # Quand aucun rôle précis n'est donné, les rôles du projet servent
+    # uniquement de deuxième niveau d'élargissement.
+    if not role:
+        for group in role_groups[1:]:
+            if primary_geo:
+                add_query(group, [primary_geo])
+
+    return queries[:18]
+
+
+def score_profile(item, params):
+    """Score de pertinence basé sur les champs réellement renseignés."""
+    text = profile_text(item)
+    normalized = normalize_text(text)
+    score = 0
+    evidence = []
+
+    role = str(params.get("role", "")).strip()
+    company = str(params.get("company", "")).strip()
+    keywords = str(params.get("keywords", "")).strip()
+
+    if role:
+        if role_matches_text(text, role):
+            score += 30
+            evidence.append("fonction")
+        else:
+            return 0, evidence
+    else:
+        score += 10
+
+    if company:
+        if contains_location(text, company):
+            score += 30
+            evidence.append("entreprise")
+        else:
+            return 0, evidence
+    else:
+        score += 5
+
+    if keywords:
+        keyword_parts = [
+            part.strip() for part in re.split(r"[,;|]+", keywords)
+            if part.strip()
         ]
-
-    for role_index in range(0, len(roles), 4):
-
-        role_group = roles[
-            role_index:role_index + 4
+        keyword_hits = [
+            part for part in keyword_parts
+            if contains_location(text, part)
         ]
+        if not keyword_hits:
+            return 0, evidence
+        score += min(15, 5 + 5 * len(keyword_hits))
+        evidence.append("mots-clés")
 
-        role_clause = quoted_or(role_group)
+    scope = str(params.get("geo_scope", "")).strip().lower()
+    code, department = department_configuration(params)
+    if department and profile_matches_department(item, code):
+        score += 25
+        evidence.append("localisation")
+    elif scope in ("custom", "idf") and profile_matches_location(item, params):
+        score += 25
+        evidence.append("localisation")
 
-        for geo_group in geo_groups:
-
-            if not geo_group:
-                continue
-
-            geo_clause = quoted_or(geo_group)
-
-            parts = [
-
-                "site:linkedin.com/in/",
-
-                role_clause,
-
-                geo_clause,
-
-                '"France"'
-            ]
-
-            if company:
-                parts.append(f'"{company}"')
-
-            if keywords:
-                parts.append(keywords)
-
-            query = " ".join(
-                part for part in parts if part
-            )
-
-            query = " ".join(query.split())[:390]
-
-            if query and query not in queries:
-                queries.append(query)
-
-    return queries
+    return score, evidence
 
 
 # ============================================================
@@ -1183,256 +1179,170 @@ def tavily_search(query, max_results):
 # RECHERCHE LINKEDIN ET FILTRAGE GÉOGRAPHIQUE
 # ============================================================
 
+
 def search_linkedin_index(params):
-
     try:
-
-        limit = min(
-            MAX_RESULTS,
-            max(1, int(params.get("limit", 10)))
-        )
-
+        limit = min(MAX_RESULTS, max(1, int(params.get("limit", 10))))
     except (ValueError, TypeError):
-
         limit = 10
 
-    key = cache_key(params, limit)
+    # Nettoyage des paramètres pour éviter les requêtes vides ou incohérentes.
+    params = dict(params or {})
+    for field in ("role", "company", "keywords", "location"):
+        params[field] = str(params.get(field, "") or "").strip()
 
+    if params.get("geo_scope") == "custom" and not params.get("location"):
+        raise ValueError("Veuillez renseigner une localisation.")
+
+    if params.get("geo_scope") == "department":
+        code = str(params.get("department", "")).strip()
+        if code not in DEPARTMENTS:
+            raise ValueError("Département invalide.")
+
+    key = cache_key(params, limit)
     now = time.monotonic()
 
-    # Vérification du cache.
     with _CACHE_LOCK:
-
         cached = _SEARCH_CACHE.get(key)
-
         if cached and now - cached[0] < CACHE_TTL_SECONDS:
-
-            result = json.loads(
-                json.dumps(cached[1])
-            )
-
+            result = json.loads(json.dumps(cached[1]))
             result["cached"] = True
-
             return refresh_result_statuses(result)
-
         if cached:
             _SEARCH_CACHE.pop(key, None)
 
     with _SEARCH_LOCK:
-
-        now = time.monotonic()
-
         with _CACHE_LOCK:
-
             cached = _SEARCH_CACHE.get(key)
-
-            if cached and now - cached[0] < CACHE_TTL_SECONDS:
-
-                result = json.loads(
-                    json.dumps(cached[1])
-                )
-
+            if cached and time.monotonic() - cached[0] < CACHE_TTL_SECONDS:
+                result = json.loads(json.dumps(cached[1]))
                 result["cached"] = True
-
                 return refresh_result_statuses(result)
 
         queries = build_queries(params)
-
         started = time.monotonic()
-
-        found = []
-
-        seen_accepted = set()
-
+        candidates = {}
         calls_made = 0
-
         rejected_geo = 0
+        rejected_relevance = 0
 
-        department_code, department = department_configuration(
-            params
-        )
+        department_code, department = department_configuration(params)
+        scope = str(params.get("geo_scope", "")).strip().lower()
 
+        # On examine plusieurs requêtes avant de limiter les résultats :
+        # cela permet de classer les profils plutôt que de retenir les premiers.
         for query_index, query in enumerate(queries):
-
-            if len(found) >= limit:
+            if calls_made >= 12:
                 break
 
             logging.info(
-                "Recherche Tavily %s/%s | Département : %s",
-                query_index + 1,
-                len(queries),
-                department_code or "non spécifié"
+                "Recherche Tavily %s/%s | zone=%s | fonction=%s | entreprise=%s",
+                query_index + 1, len(queries),
+                department_code or params.get("location") or scope,
+                params.get("role") or "rôles du projet",
+                params.get("company") or "non précisée"
             )
 
-            data = tavily_search(
-                query,
-                MAX_RESULTS
-            )
-
+            data = tavily_search(query, MAX_RESULTS)
             calls_made += 1
-
             records = data.get("results", [])
-
             if not isinstance(records, list):
-                records = []
+                continue
 
             for item in records:
-
                 if not isinstance(item, dict):
                     continue
 
-                url = normalize_linkedin_profile(
-                    item.get("url")
-                )
-
-                if not url:
+                url = normalize_linkedin_profile(item.get("url"))
+                if not url or url in candidates:
                     continue
 
-                if url in seen_accepted:
-                    continue
-
-                # Filtrage géographique.
+                # La géographie est un critère bloquant : un profil sans
+                # preuve de localisation n'est jamais présenté comme localisé.
                 if department_code:
+                    geo_ok = profile_matches_department(item, department_code)
+                elif scope in ("custom", "idf"):
+                    geo_ok = profile_matches_location(item, params)
+                else:
+                    geo_ok = True
 
-                    if not profile_matches_department(
-                        item,
-                        department_code
-                    ):
+                if not geo_ok:
+                    rejected_geo += 1
+                    continue
 
-                        rejected_geo += 1
+                score, matched_fields = score_profile(item, params)
+                if score <= 0:
+                    rejected_relevance += 1
+                    continue
 
-                        logging.info(
-                            "Profil rejeté : localisation non confirmée | %s",
-                            url
-                        )
-
-                        continue
-
-                seen_accepted.add(url)
-
-                title = str(
-                    item.get("title") or
-                    "Profil LinkedIn public"
-                )[:200]
-
-                # Enregistrement du profil dans SQLite.
-                register_profile(
-                    url,
-                    title
-                )
-
-                # Lecture de son historique.
+                title = str(item.get("title") or "Profil LinkedIn public")[:200]
+                register_profile(url, title)
                 profile_status = get_profile_status(url)
 
-                found.append({
-
+                candidates[url] = {
                     "url": url,
-
                     "title": title,
-
-                    "department": (
-                        department["name"]
-                        if department else None
+                    "department": department["name"] if department else (
+                        params.get("location") if scope == "custom" else
+                        ("Île-de-France" if scope == "idf" else None)
                     ),
-
                     "department_code": department_code,
-
-                    "location_verified": bool(
-                        department_code
-                    ),
-
-                    "location_evidence": (
-                        "Correspondance détectée dans le résultat Tavily"
-                        if department_code else None
-                    ),
-
-                    # SUIVI DES VISITES ET CONTACTS.
+                    "location_verified": bool(geo_ok and (department_code or scope in ("custom", "idf"))),
+                    "location_evidence": "Localisation repérée dans le contenu du résultat" if geo_ok else None,
+                    "match_score": score,
+                    "matched_fields": matched_fields,
                     "visited": profile_status["visited"],
-
                     "status": profile_status["status"],
-
                     "first_seen": profile_status["first_seen"],
-
                     "visited_at": profile_status["visited_at"],
-
                     "contacted_at": profile_status["contacted_at"]
-                })
+                }
 
-                logging.info(
-                    "Profil accepté : %s | Statut : %s",
-                    url,
-                    profile_status["status"]
-                )
+            # Après au moins deux recherches ciblées, si le vivier est suffisant,
+            # on évite les appels inutiles.
+            if calls_made >= 2 and len(candidates) >= limit * 2:
+                break
 
-                if len(found) >= limit:
-                    break
+        ranked = sorted(
+            candidates.values(),
+            key=lambda profile: (
+                profile["match_score"],
+                bool(profile.get("location_verified"))
+            ),
+            reverse=True
+        )
+        found = ranked[:limit]
 
-        # Résultat final.
         result = {
-
             "results": found,
-
             "count": len(found),
-
             "verified": False,
-
-            "geographic_filter": "strict",
-
-            "department": (
-                department["name"]
-                if department else None
+            "geographic_filter": "strict" if department_code else "requested",
+            "department": department["name"] if department else (
+                params.get("location") if scope == "custom" else
+                ("Île-de-France" if scope == "idf" else None)
             ),
-
             "department_code": department_code,
-
             "rejected_geographic": rejected_geo,
-
-            "status": (
-                "ok" if found else "no_results"
-            ),
-
+            "rejected_relevance": rejected_relevance,
+            "status": "ok" if found else "no_results",
             "cached": False,
-
-            "elapsed_ms": round(
-                (time.monotonic() - started) * 1000
-            ),
-
+            "elapsed_ms": round((time.monotonic() - started) * 1000),
             "queries_used": calls_made,
-
             "search_backends": ["tavily"],
-
             "message": (
-
-                f"{len(found)} profil(s) retenu(s) après "
-                f"filtrage géographique du département "
-                f"{department_code} - {department['name']}."
-                if found and department else
-
-                (
-                    "Aucun profil avec une localisation "
-                    "confirmée dans le département sélectionné. "
-                    "Essayez d'autres rôles ou mots-clés."
-                    if department else
-                    "Recherche terminée."
-                )
+                f"{len(found)} profil(s) retenu(s), classé(s) selon les critères saisis."
+                if found else
+                "Aucun profil ne correspond suffisamment aux critères renseignés. "
+                "Vérifiez l'orthographe ou élargissez un seul critère à la fois."
             )
         }
 
         with _CACHE_LOCK:
-
             if len(_SEARCH_CACHE) >= 100:
-
-                oldest = min(
-                    _SEARCH_CACHE,
-                    key=lambda item: _SEARCH_CACHE[item][0]
-                )
-
+                oldest = min(_SEARCH_CACHE, key=lambda item: _SEARCH_CACHE[item][0])
                 _SEARCH_CACHE.pop(oldest, None)
-
-            _SEARCH_CACHE[key] = (
-                time.monotonic(),
-                result
-            )
+            _SEARCH_CACHE[key] = (time.monotonic(), result)
 
         return result
 
